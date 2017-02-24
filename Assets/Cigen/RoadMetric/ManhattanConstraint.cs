@@ -10,7 +10,7 @@ public class ManhattanConstraint : MetricConstraint {
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
     }
 
-    public override Vector3[] ExtraVertices(Vector3 start, Vector3 end)
+    public override Vector3[] ExtraVerticesBetween(Vector3 start, Vector3 end)
     {
         List<Vector3> newPos = new List<Vector3>();
         Vector3 dPos = end - start;
@@ -29,5 +29,10 @@ public class ManhattanConstraint : MetricConstraint {
             newPos.Add(start);
         }
         return newPos.ToArray();
+    }
+
+    public override Vector3[] ProcessPoints(params Vector3[] points)
+    {
+        return points;
     }
 }

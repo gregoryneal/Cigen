@@ -14,14 +14,14 @@ public class City : MonoBehaviour {
     private MetricConstraint m;
 
     public void Init(Vector3 position, CiSettings settings) {
-        origin = CreateIntersection(position);
         this.settings = settings;
         m = MetricFactory.Process(this.settings.metric);
+        origin = CreateIntersection(position);
     }
     
     public Intersection CreateIntersection(Vector3 position) {
         Intersection temp = new GameObject("intersection").AddComponent<Intersection>();
-        temp.Init(position, this);
+        temp.Init(m.ProcessPoints(position)[0], this);
         intersections.Add(temp);
         return temp;
     }
@@ -41,7 +41,7 @@ public class City : MonoBehaviour {
     private Vector3 RandomPosition() {
         Func<float, float> r = f => UnityEngine.Random.Range(-f, f);
         Vector3 pos = new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z));
-        return pos;
+        return m.ProcessPoints(pos)[0];
     }
 
     //Nearest node in graphNodes to position q
@@ -150,7 +150,7 @@ public class City : MonoBehaviour {
 
     private Intersection[] TransformToMetric(Vector3 nearestPoint, Vector3 randomPoint) {
         //print("transforming to metric!");
-        Vector3[] positionsConformingToMetric = m.ExtraVertices(nearestPoint, randomPoint);
+        Vector3[] positionsConformingToMetric = m.ExtraVerticesBetween(nearestPoint, randomPoint);
         
         if (positionsConformingToMetric != null) {
             Intersection[] nodes = new Intersection[positionsConformingToMetric.Length];

@@ -36,6 +36,9 @@ namespace Cigen.Factories {
                 case MetricSpace.MANHATTAN:
                     m = new ManhattanConstraint();
                     break;
+                case MetricSpace.GRID:
+                    m = new GridConstraint();
+                    break;
             }
             return m;
         }

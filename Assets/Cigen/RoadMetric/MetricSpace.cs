@@ -8,6 +8,7 @@ namespace Cigen.MetricConstraint {
     [System.Serializable]
     public enum MetricSpace {
         EUCLIDEAN,
-        MANHATTAN, 
+        MANHATTAN,
+        GRID,
     }
 }

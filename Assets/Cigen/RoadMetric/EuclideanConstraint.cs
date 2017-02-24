@@ -10,8 +10,13 @@ public class EuclideanConstraint : MetricConstraint {
         return Vector3.Distance(start, end);
     }
 
-    public override Vector3[] ExtraVertices(Vector3 start, Vector3 end)
+    public override Vector3[] ExtraVerticesBetween(Vector3 start, Vector3 end)
     {
         return null;
+    }
+
+    public override Vector3[] ProcessPoints(params Vector3[] points)
+    {
+        return points;
     }
 }
