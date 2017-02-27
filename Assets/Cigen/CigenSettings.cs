@@ -21,7 +21,7 @@ public class CitySettings : ScriptableObject {
     [Space(10)]
     [Header("Intersection settings")]
     public int maxNumberOfIntersections = 150;
-    public int intersectionPlacementAttempts = 20;
+    public int intersectionPlacementAttempts = 20; //amount of intersection placement attempts per individual intersection
     public float maxIntersectionMergeRadius = 30f; //how close a proposed intersection must to another intersection before they are merged
     [MinMaxRange(0, 60)]
     public MinMaxRange randomIntersectionSearchRadius;
@@ -42,5 +42,4 @@ public class CitySettings : ScriptableObject {
     [Space(10)]
     [Header("Metric settings")]
     public MetricSpace metric = MetricSpace.MANHATTAN;
-    public MetricConstraint MetricConstraint { get; private set; }
 }

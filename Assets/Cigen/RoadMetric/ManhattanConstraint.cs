@@ -15,8 +15,32 @@ public class ManhattanConstraint : MetricConstraint {
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
     }
 
-    public override Vector3[] ProcessPoints(params Vector3[] points)
+    public override List<Vector3> ProcessPath(Vector3 start, Vector3 end)
     {
-        return points;
+        start = ProcessPoint(start);
+        end = ProcessPoint(end);
+
+        Vector3 positionToAdd = start;
+        Vector3 delta = end - start;
+
+        List<Vector3> ret = new List<Vector3> { start, };
+        positionToAdd = ProcessPoint(positionToAdd + delta.x * Vector3.right);
+        if (delta.x >= settings.minimumRoadLength && !ret.Contains(positionToAdd)) {
+            ret.Add(positionToAdd);
+        }
+
+        positionToAdd = ProcessPoint(positionToAdd + delta.y * Vector3.up);
+        if (delta.y >= settings.minimumRoadLength && !ret.Contains(positionToAdd)) {
+            ret.Add(positionToAdd);
+        }
+        
+        positionToAdd = ProcessPoint(positionToAdd + delta.z * Vector3.forward);
+        if (delta.z >= settings.minimumRoadLength && !ret.Contains(positionToAdd)) {
+            ret.Add(positionToAdd);
+        }
+
+        ret.Add(end);
+
+        return ret;
     }
 }

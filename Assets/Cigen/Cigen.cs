@@ -43,37 +43,28 @@ namespace Cigen
         city = CigenFactory.CreateCity(initState, settings);
         while (true) {
             it++;
-            if (city.intersections.Count >= settings.maxNumberOfIntersections) {
+            if (city.intersections.Count >= settings.maxNumberOfIntersections || it > settings.maxNumberOfIntersections * settings.intersectionPlacementAttempts) {
                 break;
             }
-                        
+            
+            print("Starting next iteration...");
             city.AddRandomIntersectionToRoadNetwork();            
-            yield return new WaitUntil(()=>Input.GetKeyDown(KeyCode.Space));
+            yield return new WaitForEndOfFrame();
+            //yield return new WaitUntil(()=>Input.GetKeyDown(KeyCode.Space));
         }
-        foreach (Road road in city.roads) {
-            if (road.length >= settings.minimumRoadLength) {
-                road.ZonePlots();
-                yield return new WaitForEndOfFrame();
-            }
+        
+        while (true) {
+            if (city.buildings.Count >= settings.numBuildings)
+                break;
+            CigenFactory.CreateBuilding(city.RandomPlot());
+            yield return new WaitForEndOfFrame();
         }
 
-        print("Generated " + city.intersections.Count + " intersections in " + it + " iterations.");
+        print("Intersections: " + city.intersections.Count);
+        print("Roads: " + city.roads.Count);
+        print("Plots: " + city.plots.Count);
+        print("Iterations: " + it);
         yield break;
-    }
-
-    private Plot RandomPlot() {
-        Intersection i = city.intersections[Random.Range(0, city.intersections.Count)];
-        Road r = i.roads[Random.Range(0, i.roads.Count)];
-        
-        if (Random.value < 0.5f) {
-            if (r.leftPlot == null)
-                print("lplot null");
-            return r.leftPlot;
-        }
-        
-        if (r.rightPlot == null)
-            print("rplot null");
-        return r.rightPlot;
     }
 
     private void ConnectNodes(Intersection parent, Intersection child) {

@@ -9,8 +9,14 @@ namespace Cigen.Factories {
             return road;
         }
 
-	    public static Intersection CreateIntersection(Vector3 position, City city, string name = "Intersection") {
-            Intersection c = city.CreateIntersection(position);
+        public static RoadPath CreatePath(Intersection head, Intersection tail) {
+            RoadPath rp = new RoadPath(head, tail);
+            rp.BuildPath();
+            return rp;
+        }
+
+	    public static Intersection CreateOrMergeIntersection(Vector3 position, City city, string name = "Intersection") {
+            Intersection c = city.CreateOrMergeNear(position);
             c.name = name;
             return c;
         }
@@ -22,19 +28,26 @@ namespace Cigen.Factories {
         }
 
         public static Plot[] CreatePlots(Road road, string name = "Plot") {
+            BoxCollider bc;
+
             Plot[] plots = new Plot[2];
             Plot plot = new GameObject(name, typeof(BoxCollider)).gameObject.AddComponent<Plot>();
             plot.Init(road, PlotRoadSide.PLOTLEFT);
             plots[0] = plot;
+            bc = plot.GetComponent<BoxCollider>();
+            bc.isTrigger = true;
 
             plot = new GameObject(name, typeof(BoxCollider)).AddComponent<Plot>();
             plot.Init(road, PlotRoadSide.PLOTRIGHT);
             plots[1] = plot;
+            bc = plot.GetComponent<BoxCollider>();
+            bc.isTrigger = true;            
+
             return plots;
         }
 
         public static Building CreateBuilding(Plot plot, string name = "Building") {
-            Building b = new GameObject(name).AddComponent<Building>();
+            Building b = GameObject.CreatePrimitive(PrimitiveType.Cube).AddComponent<Building>();
             b.Init(plot);
             return b;
         }

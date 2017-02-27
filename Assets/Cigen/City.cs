@@ -10,23 +10,25 @@ public class City : MonoBehaviour {
     
     public List<Intersection> intersections = new List<Intersection>();
     public List<Road> roads = new List<Road>();
+    public List<Plot> plots = new List<Plot>();
+    public List<Building> buildings = new List<Building>();
     public Intersection origin;
     public CitySettings settings { get; private set; }
 
-    private MetricConstraint m;
+    public MetricConstraint metricConstraint;
 
     public void Init(Vector3 position, CitySettings settings) {
         transform.position = position;
         this.settings = settings;
-        m = MetricFactory.Process(this.settings.metric, settings);
-        origin = CigenFactory.CreateIntersection(position, this);
+        metricConstraint = MetricFactory.Process(this.settings.metric, settings);
+        origin = CigenFactory.CreateOrMergeIntersection(position, this);
     }
     
     //Creates an intersection at the position, returns an intersection if one already exists there (or close enough)
-    public Intersection CreateIntersection(Vector3 position) {
-        position = m.ProcessPoints(position)[0];
+    public Intersection CreateOrMergeNear(Vector3 position) {
+        position = metricConstraint.ProcessPoint(position);
         Intersection nearest = NearestIntersection(position);
-        float dist = nearest == null ? 0 : m.Distance(position, nearest.Position);
+        float dist = nearest == null ? 0 : metricConstraint.Distance(position, nearest.Position);
         if(nearest != null && dist <= settings.maxIntersectionMergeRadius) {
             return nearest;
         } else { 
@@ -39,32 +41,26 @@ public class City : MonoBehaviour {
 
     public bool IsValidRoad(Vector3 proposedStart, Vector3 proposedEnd) {
         Vector3 center = Vector3.Lerp(proposedStart, proposedEnd, 0.5f);
-        float length = m.Distance(proposedStart, proposedEnd);
+        float length = metricConstraint.Distance(proposedStart, proposedEnd);
         Vector3 direction = (proposedEnd - proposedStart).normalized;
+        List<Vector3> path = new RoadPath(proposedStart, proposedEnd, this).Path;
 
         if (length < settings.minimumRoadLength) {
             return false;
         }
-        if (Physics.CheckBox(center, new Vector3(settings.roadDimensions.x, settings.roadDimensions.y, length) / 2f)) {
-            return false;
-        }
 
-        /*
-        foreach (Road road in roads) {
-            float a = Vector3.Distance(proposedStart, road.parentNode.Position);
-            float b = Vector3.Distance(proposedEnd, road.childNode.Position);
-            float c = Vector3.Distance(proposedStart, road.childNode.Position);
-            float e = Vector3.Distance(proposedEnd, road.parentNode.Position);
-            Vector3 d = road.direction;
-            if (Mathf.Max(a,b,c,e) < settings.minimumRoadLength && Mathf.Acos(Vector3.Dot(direction, d) / (direction.magnitude * d.magnitude)) <= settings.minimumNearbyRoadAngleSimilarity) {
+        for (int i = 0; i < path.Count-1; i++) {
+            center = Vector3.Lerp(path[i], path[i+1], 0.5f);
+            length = metricConstraint.Distance(path[i], path[i+1]);
+            if (Physics.CheckBox(center, new Vector3(settings.roadDimensions.x, settings.roadDimensions.y, length*0.95f) / 2f)) {
                 return false;
             }
-        }*/
+        }
         return true;
     }
 
     public Intersection CreateIntersectionAtPositionOnRoad(Vector3 position, Road road) {
-        Intersection newIntersection = CigenFactory.CreateIntersection(position, this);
+        Intersection newIntersection = CigenFactory.CreateOrMergeIntersection(position, this);
         Intersection parent = road.parentNode;
         Intersection child = road.childNode;
         road.Remove();
@@ -75,7 +71,7 @@ public class City : MonoBehaviour {
 
     private Vector3 RandomPosition() {
         Func<float, float> r = f => UnityEngine.Random.Range(-f, f);
-        Vector3 pos = m.ProcessPoints(new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z)))[0];
+        Vector3 pos = metricConstraint.ProcessPoint(new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z)));
         return pos;
     }
 
@@ -95,8 +91,8 @@ public class City : MonoBehaviour {
         float minDistance = float.MaxValue;
         Road roadz = null;
         foreach (Road road in roads) {
-            Vector3 closestPointOnLine = GetClosestPointOnLineSegment(road.parentNode.Position, road.childNode.Position, position);
-            float dist = m.Distance(closestPointOnLine, position);
+            Vector3 closestPointOnLine = metricConstraint.ProcessPoint(GetClosestPointOnLineSegment(road.parentNode.Position, road.childNode.Position, position));
+            float dist = metricConstraint.Distance(closestPointOnLine, position);
             if (dist < minDistance) {
                 minPosition = closestPointOnLine;
                 minDistance = dist;
@@ -111,7 +107,7 @@ public class City : MonoBehaviour {
     //Nearest node in graphNodes to position q
     private Intersection NearestIntersection(Vector3 q) {
         if (intersections.Count > 0) {
-            return intersections.OrderBy(i=>m.Distance(q, i.Position)).First();
+            return intersections.OrderBy(i=>metricConstraint.Distance(q, i.Position)).First();
         }
 
         return null;
@@ -131,33 +127,22 @@ public class City : MonoBehaviour {
         }
         if (bestPositionForIntersection != Vector3.one * float.MaxValue) {
             if (IsValidRoad(bestPositionForIntersection, p1)) {
-                Intersection q1 = CigenFactory.CreateIntersection(p1, this);
+                Intersection q1 = CigenFactory.CreateOrMergeIntersection(p1, this);
 
                 if (cmpr is Intersection) {
                     intersectionToConnectTo = (Intersection)cmpr;
-                    CigenFactory.CreateRoad(q1, intersectionToConnectTo);
                 }
 
                 if (cmpr is Road) {
                     roadToConnectTo = (Road)cmpr;
-                    CigenFactory.CreateRoad(q1, CreateIntersectionAtPositionOnRoad(bestPositionForIntersection, roadToConnectTo));
+                    intersectionToConnectTo = CreateIntersectionAtPositionOnRoad(bestPositionForIntersection, roadToConnectTo);
+                }
+
+                if (intersectionToConnectTo != null) {
+                    CigenFactory.CreatePath(q1, intersectionToConnectTo);
                 }
             }
         }
-    }
-
-    private Intersection[] TransformToMetric(Vector3 nearestPoint, Vector3 randomPoint) {
-        //print("transforming to metric!");
-        Vector3[] positionsConformingToMetric = m.ProcessPoints(nearestPoint, randomPoint);
-        
-        if (positionsConformingToMetric != null) {
-            Intersection[] nodes = new Intersection[positionsConformingToMetric.Length];
-            for (int i = 0; i < nodes.Length; i++) {
-                nodes[i] = CigenFactory.CreateIntersection(positionsConformingToMetric[i], this);
-            }
-            return nodes;
-        }
-        return new Intersection[] { };
     }
 
     public static Vector3 GetClosestPointOnLineSegment(Vector3 lineStart, Vector3 lineEnd, Vector3 point)
@@ -172,5 +157,9 @@ public class City : MonoBehaviour {
             return lineEnd;
         }
         return lineStart + AB * distance;
+    }
+
+    public Plot RandomPlot() {
+        return plots[UnityEngine.Random.Range(0, plots.Count)];
     }
 }

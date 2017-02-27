@@ -30,7 +30,13 @@ public class Building : MonoBehaviour {
 
         transform.position = obj.transform.position;
         transform.rotation = obj.transform.rotation;
+        plot.city.buildings.Add(this);
         obj.transform.SetParent(transform, true);
+    }
+
+    public void Demolish() {
+        plot.city.buildings.Remove(this);
+        Destroy(gameObject);
     }
 
     public GameObject MakeABuilding(Vector3 minSize, Vector3 maxSize) {

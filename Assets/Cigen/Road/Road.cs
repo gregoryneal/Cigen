@@ -89,19 +89,36 @@ public class Road : MonoBehaviour {
 
         setEndState();
         cube.transform.parent = transform;
+        ZonePlots();
         built = true;
         yield break;
     }
 
     public void ZonePlots() {
+        if (length < city.settings.minimumRoadLength)
+            return;
+
+        if (this.leftPlot != null)
+            Destroy(this.leftPlot.gameObject);
+        if (this.rightPlot != null)
+            Destroy(this.rightPlot.gameObject);
+
         Plot[] plots = CigenFactory.CreatePlots(this);
-        leftPlot = plots[0];
-        rightPlot = plots[1]; 
+        this.leftPlot = plots[0];
+        this.rightPlot = plots[1];
     }
 
     public void Remove() {
         parentNode.RemoveConnection(childNode);
         city.roads.Remove(this);
+        if (leftPlot != null) { 
+            city.plots.Remove(leftPlot);
+            Destroy(leftPlot.gameObject);
+        }
+        if (rightPlot != null) { 
+            city.plots.Remove(rightPlot);
+            Destroy(rightPlot.gameObject);
+        }
         Destroy(gameObject);
     }
 }

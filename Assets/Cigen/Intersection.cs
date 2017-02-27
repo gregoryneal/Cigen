@@ -70,13 +70,18 @@ public class Intersection : MonoBehaviour {
         _position = position;
         this.city = city;
         transform.parent = city.transform;
+
+        GetComponent<Renderer>().material.mainTexture = city.settings.roadTexture;
     }
 
     public void ConnectToIntersection(Intersection child) {
+        if (this == child)
+            return;
+
         children.Add(child);
         child.parent = this;
         Vector3 look = child.Position - transform.position;
-        transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+        transform.rotation = Quaternion.LookRotation(-look, Vector3.up);
         child.transform.rotation = Quaternion.LookRotation(-look, Vector3.up);
     }
 

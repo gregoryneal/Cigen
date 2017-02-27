@@ -16,13 +16,8 @@ public class GridConstraint : ManhattanConstraint {
         return new Vector3(rts(v.x), rts(v.y), rts(v.z));
     }
 
-    public override Vector3[] ProcessPoints(params Vector3[] points)
+    public override Vector3 ProcessPoint(Vector3 point)
     {
-        Vector3[] ret = new Vector3[points.Length];
-        for (int i = 0; i < points.Length; i++) {
-            ret[i] = RoundToScale(points[i]);
-        }
-
-        return ret;
+        return RoundToScale(point);
     }
 }
