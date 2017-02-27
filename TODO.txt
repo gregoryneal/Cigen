@@ -1,0 +1,4 @@
+potential roads are not being checked for validity before being placed
+building a road between intersection needs to take into consideration metric constraints so that it can alter the path a road takes to get from A to B. Maybe a new data type that holds an array of connected roads and intersections with a defined flow between them. Then the parent and child of the first and last ones could be exposed and just placed in the world that way.
+make intersections as of now only 4 roads, one on each face.
+connecting intersection to existing intersection creates an extra intersection on top of it with a road of length 0 between them.

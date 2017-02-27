@@ -48,7 +48,12 @@ public class Intersection : MonoBehaviour {
     }
 
     public void MoveIntersection(Vector3 newPosition) {
+        transform.position = newPosition;
         _position = newPosition;
+
+        foreach (Road road in roads) {
+            road.Rebuild();
+        }
     }
 
     public void AddRoad(Road road) {
@@ -58,6 +63,10 @@ public class Intersection : MonoBehaviour {
     }
 
     public void Init(Vector3 position, City city) {
+        transform.position = position;
+        Vector3 roadDim = city.settings.roadDimensions;
+        roadDim.z = roadDim.x;
+        transform.localScale = roadDim;
         _position = position;
         this.city = city;
         transform.parent = city.transform;
@@ -66,29 +75,13 @@ public class Intersection : MonoBehaviour {
     public void ConnectToIntersection(Intersection child) {
         children.Add(child);
         child.parent = this;
+        Vector3 look = child.Position - transform.position;
+        transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+        child.transform.rotation = Quaternion.LookRotation(-look, Vector3.up);
     }
 
     public void RemoveConnection(Intersection child) {
         child.parent = null;
         children.Remove(child);
-        /*foreach (Road road in roads) {
-            if (road.childNode == child) {
-                Destroy(road.gameObject);
-            }
-        }*/
-    }
-
-    public static Intersection CreateIntersectionBetweenIntersections(Intersection int1, Intersection int2, Vector3 position) {
-        Intersection intersectionNode = CigenFactory.CreateIntersection(position, int1.city);
-        if (int1.parent == int2) { //we are further upstream, connect flow in one direction
-            int2.RemoveConnection(int1);
-            int2.ConnectToIntersection(intersectionNode);
-            intersectionNode.ConnectToIntersection(int1);
-        } else { //the other node is the parent, we are further downstream, connect flow in opposite direction
-            int1.RemoveConnection(int2);
-            int1.ConnectToIntersection(intersectionNode);
-            intersectionNode.ConnectToIntersection(int2);
-        }
-        return intersectionNode;
     }
 }

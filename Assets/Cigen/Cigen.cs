@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using Cigen.Factories;
+using System.Collections.Generic;
 
 namespace Cigen
 {
@@ -9,7 +10,7 @@ namespace Cigen
     #region Variables
 
     #region Public
-    public CiSettings settings;
+    public CitySettings settings;
     #endregion
 
     #region Private
@@ -41,16 +42,38 @@ namespace Cigen
         transform.position = initState;
         city = CigenFactory.CreateCity(initState, settings);
         while (true) {
-            city.AddRandomIntersectionToRoadNetwork();            
-
-            if (settings.numberOfIntersections > 0 && it >= settings.numberOfIntersections) {
+            it++;
+            if (city.intersections.Count >= settings.maxNumberOfIntersections) {
                 break;
             }
-            yield return new WaitForEndOfFrame();
-            it++;
+                        
+            city.AddRandomIntersectionToRoadNetwork();            
+            yield return new WaitUntil(()=>Input.GetKeyDown(KeyCode.Space));
         }
-        print("Broke loop after " + it + " iterations.");
+        foreach (Road road in city.roads) {
+            if (road.length >= settings.minimumRoadLength) {
+                road.ZonePlots();
+                yield return new WaitForEndOfFrame();
+            }
+        }
+
+        print("Generated " + city.intersections.Count + " intersections in " + it + " iterations.");
         yield break;
+    }
+
+    private Plot RandomPlot() {
+        Intersection i = city.intersections[Random.Range(0, city.intersections.Count)];
+        Road r = i.roads[Random.Range(0, i.roads.Count)];
+        
+        if (Random.value < 0.5f) {
+            if (r.leftPlot == null)
+                print("lplot null");
+            return r.leftPlot;
+        }
+        
+        if (r.rightPlot == null)
+            print("rplot null");
+        return r.rightPlot;
     }
 
     private void ConnectNodes(Intersection parent, Intersection child) {

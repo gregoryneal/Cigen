@@ -3,154 +3,152 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cigen.MetricConstraint;
 using Cigen.Factories;
+using System.Collections;
+using System.Linq;
 
 public class City : MonoBehaviour {
     
     public List<Intersection> intersections = new List<Intersection>();
     public List<Road> roads = new List<Road>();
     public Intersection origin;
-    public CiSettings settings { get; private set; }
+    public CitySettings settings { get; private set; }
 
     private MetricConstraint m;
 
-    public void Init(Vector3 position, CiSettings settings) {
+    public void Init(Vector3 position, CitySettings settings) {
+        transform.position = position;
         this.settings = settings;
-        m = MetricFactory.Process(this.settings.metric);
-        origin = CreateIntersection(position);
+        m = MetricFactory.Process(this.settings.metric, settings);
+        origin = CigenFactory.CreateIntersection(position, this);
     }
     
+    //Creates an intersection at the position, returns an intersection if one already exists there (or close enough)
     public Intersection CreateIntersection(Vector3 position) {
-        Intersection temp = new GameObject("intersection").AddComponent<Intersection>();
-        temp.Init(m.ProcessPoints(position)[0], this);
-        intersections.Add(temp);
-        return temp;
+        position = m.ProcessPoints(position)[0];
+        Intersection nearest = NearestIntersection(position);
+        float dist = nearest == null ? 0 : m.Distance(position, nearest.Position);
+        if(nearest != null && dist <= settings.maxIntersectionMergeRadius) {
+            return nearest;
+        } else { 
+            Intersection temp = GameObject.CreatePrimitive(PrimitiveType.Cube).AddComponent<Intersection>();
+            temp.Init(position, this);
+            intersections.Add(temp);
+            return temp;
+        }
     }
 
     public bool IsValidRoad(Vector3 proposedStart, Vector3 proposedEnd) {
         Vector3 center = Vector3.Lerp(proposedStart, proposedEnd, 0.5f);
-        float length = Vector3.Distance(proposedStart, proposedEnd);
+        float length = m.Distance(proposedStart, proposedEnd);
+        Vector3 direction = (proposedEnd - proposedStart).normalized;
+
         if (length < settings.minimumRoadLength) {
             return false;
         }
         if (Physics.CheckBox(center, new Vector3(settings.roadDimensions.x, settings.roadDimensions.y, length) / 2f)) {
             return false;
         }
+
+        /*
+        foreach (Road road in roads) {
+            float a = Vector3.Distance(proposedStart, road.parentNode.Position);
+            float b = Vector3.Distance(proposedEnd, road.childNode.Position);
+            float c = Vector3.Distance(proposedStart, road.childNode.Position);
+            float e = Vector3.Distance(proposedEnd, road.parentNode.Position);
+            Vector3 d = road.direction;
+            if (Mathf.Max(a,b,c,e) < settings.minimumRoadLength && Mathf.Acos(Vector3.Dot(direction, d) / (direction.magnitude * d.magnitude)) <= settings.minimumNearbyRoadAngleSimilarity) {
+                return false;
+            }
+        }*/
         return true;
+    }
+
+    public Intersection CreateIntersectionAtPositionOnRoad(Vector3 position, Road road) {
+        Intersection newIntersection = CigenFactory.CreateIntersection(position, this);
+        Intersection parent = road.parentNode;
+        Intersection child = road.childNode;
+        road.Remove();
+        CigenFactory.CreateRoad(parent, newIntersection);
+        CigenFactory.CreateRoad(newIntersection, child);
+        return newIntersection;
     }
 
     private Vector3 RandomPosition() {
         Func<float, float> r = f => UnityEngine.Random.Range(-f, f);
-        Vector3 pos = new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z));
-        return m.ProcessPoints(pos)[0];
+        Vector3 pos = m.ProcessPoints(new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z)))[0];
+        return pos;
+    }
+
+    //Need to test every possible road.
+    private object[] ClosestPointOnRoadNetwork(Vector3 position) {
+        object[] ret = new object[2];
+        if (roads == null || roads.Count == 0) {
+            if (intersections.Count > 0) {
+                Intersection r = NearestIntersection(position);
+                ret[0] = r.Position;
+                ret[1] = r;
+                return ret;
+            }
+        }
+        
+        Vector3 minPosition = position;
+        float minDistance = float.MaxValue;
+        Road roadz = null;
+        foreach (Road road in roads) {
+            Vector3 closestPointOnLine = GetClosestPointOnLineSegment(road.parentNode.Position, road.childNode.Position, position);
+            float dist = m.Distance(closestPointOnLine, position);
+            if (dist < minDistance) {
+                minPosition = closestPointOnLine;
+                minDistance = dist;
+                roadz = road;
+            }
+        }
+        ret[0] = minPosition;
+        ret[1] = roadz;
+        return ret;
     }
 
     //Nearest node in graphNodes to position q
     private Intersection NearestIntersection(Vector3 q) {
-        //print("Nearest neighbor called!");
-        List<Intersection> emptyIntersections = new List<Intersection>();
-        Intersection closest = origin;
-        float smallestDist = float.MaxValue;
-        foreach(Intersection v in intersections) {
-            if (intersections.Count > 1 && v.AllConnections.Count == 0) { //if we have at least 2 intersections but this one isn't connected to any of them
-                emptyIntersections.Add(v); // mark this intersection for deletion and don't consider it as the nearest node
-                continue;
-            }
-
-            float dist = m.Distance(v.Position, q);
-            if (dist < smallestDist) {
-                smallestDist = dist;
-                closest = v;
-            }
+        if (intersections.Count > 0) {
+            return intersections.OrderBy(i=>m.Distance(q, i.Position)).First();
         }
 
-        if (emptyIntersections.Count > 0) { 
-            foreach(Intersection v in emptyIntersections) {
-                intersections.Remove(v);
-            }
-        }
-
-        if (closest == null) 
-            print("closest null");
-        return closest;
+        return null;
     }
 
     public void AddRandomIntersectionToRoadNetwork() {
-        Intersection qRand = CigenFactory.CreateIntersection(RandomPosition(), this);  //get a random position
-        Intersection qNear = NearestIntersection(qRand.Position); //find the nearest intersection to the random position
-        List<Intersection> connections = qNear.AllConnections;
-        bool failed = true;
-        if (connections.Count <= 0) {                              //if it has no connections...
-            for (int i = 0; i < settings.intersectionPlacementAttempts; i++) { 
-                if (IsValidRoad(qNear.Position, qRand.Position)) {
-                    failed = false;
-                    break;
-                } else {
-                    print(qRand.GetInstanceID() + ": Invalid road, moving to random nearby location.");
-                    qRand.MoveIntersection(RandomPosition());
-                    qNear = NearestIntersection(qRand.Position); 
-                }
-            }
-            if (failed) {
-                print(qRand.GetInstanceID() + ": failed to find place for intersection, destroying.");      
-                Destroy(qRand.gameObject);
-                return;
-            }
-            CigenFactory.CreateRoad(qNear, qRand);
-        } else {                                                    //otherwise
-            Intersection otherNode = connections[0];                //try to find a closer 
-            Vector3 bestPos = otherNode.Position;
-            for (int i = 0; i < settings.intersectionPlacementAttempts; i++) { 
-                connections = qNear.AllConnections;
-                float smallestDist = Vector3.Distance(qRand.Position, bestPos);
-                foreach (Intersection intersection in connections) {
-                    Vector3 closestPointOnLineBetweenNodes = GetClosestPointOnLineSegment(qNear.Position, intersection.Position, qRand.Position);
-                    float dist = Vector3.Distance(qRand.Position, closestPointOnLineBetweenNodes);
-                    if (dist < smallestDist) {
-                        smallestDist = dist;
-                        bestPos = closestPointOnLineBetweenNodes;
-                        otherNode = intersection;
-                    }
-                }
+        Vector3 p1 = RandomPosition();
 
-                if (IsValidRoad(bestPos, qRand.Position)) {
-                    failed = false;
-                    break;
-                } else {
-                    print(qRand.GetInstanceID() + ": Invalid road, moving to random nearby location.");
-                    qRand.MoveIntersection(RandomPosition());
-                    qNear = NearestIntersection(qRand.Position);
-                } 
-            }
-
-            if (failed) {            
-                print(qRand.GetInstanceID() + ": failed to find place for intersection, destroying.");      
-                Destroy(qRand.gameObject);
-                return;
-            }
-
-            Intersection newNode = qNear;
-            if (Vector3.Distance(bestPos, qNear.Position) > settings.maxIntersectionMergeRadius) {
-                newNode = Intersection.CreateIntersectionBetweenIntersections(qNear, otherNode, bestPos);
-                intersections.Add(newNode);
-            }
-                
-            Intersection[] extraNodes = TransformToMetric(newNode.Position, qRand.Position); //add any extra nodes (intersections) due to constraints
-            if (extraNodes.Length > 0) {
-                //connect all extra nodes downstream from newNode to qRand
-                foreach (Intersection extraNode in extraNodes) {
-                    intersections.Add(extraNode);
-                    CigenFactory.CreateRoad(newNode, extraNode);
-                    newNode = extraNode;
-                }
-            }
-            CigenFactory.CreateRoad(newNode, qRand);
+        Vector3 bestPositionForIntersection = Vector3.one * float.MaxValue;
+        Road roadToConnectTo = null;
+        Intersection intersectionToConnectTo = null;
+        object cmpr = null;
+        {
+            object[] data = ClosestPointOnRoadNetwork(p1);
+            bestPositionForIntersection = (Vector3)data[0];
+            cmpr = data[1];
         }
-        intersections.Add(qRand);
+        if (bestPositionForIntersection != Vector3.one * float.MaxValue) {
+            if (IsValidRoad(bestPositionForIntersection, p1)) {
+                Intersection q1 = CigenFactory.CreateIntersection(p1, this);
+
+                if (cmpr is Intersection) {
+                    intersectionToConnectTo = (Intersection)cmpr;
+                    CigenFactory.CreateRoad(q1, intersectionToConnectTo);
+                }
+
+                if (cmpr is Road) {
+                    roadToConnectTo = (Road)cmpr;
+                    CigenFactory.CreateRoad(q1, CreateIntersectionAtPositionOnRoad(bestPositionForIntersection, roadToConnectTo));
+                }
+            }
+        }
     }
 
     private Intersection[] TransformToMetric(Vector3 nearestPoint, Vector3 randomPoint) {
         //print("transforming to metric!");
-        Vector3[] positionsConformingToMetric = m.ExtraVerticesBetween(nearestPoint, randomPoint);
+        Vector3[] positionsConformingToMetric = m.ProcessPoints(nearestPoint, randomPoint);
         
         if (positionsConformingToMetric != null) {
             Intersection[] nodes = new Intersection[positionsConformingToMetric.Length];
@@ -167,10 +165,10 @@ public class City : MonoBehaviour {
         Vector3 AB = lineEnd - lineStart;
         float distance = Vector3.Dot(point - lineStart, AB) / Vector3.Dot(AB, AB);
 
-        if (distance < 0) {
+        if (distance <= 0) {
             return lineStart;
         }
-        else if (distance > 1) {
+        else if (distance >= 1) {
             return lineEnd;
         }
         return lineStart + AB * distance;
