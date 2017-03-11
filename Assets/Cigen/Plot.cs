@@ -32,10 +32,10 @@ public class Plot : MonoBehaviour {
             sideDirection *= -1;
         }
 
-        transform.position = road.Midpoint + (sideDirection * (city.settings.plotPadding + ((city.settings.maxPlotWidth + city.settings.roadDimensions.x) / 2f)));
+        transform.position = city.transform.position + road.transform.position + (sideDirection * (city.settings.plotPadding + ((city.settings.maxPlotWidth + city.settings.roadDimensions.x) / 2f)));
         transform.localScale = new Vector3(city.settings.maxPlotWidth, Random.value * 0.5f, road.length - (2*city.settings.plotPadding));
         transform.rotation = Quaternion.LookRotation(road.direction);
-        transform.SetParent(road.transform, true);        
+        transform.SetParent(road.transform);        
     }
 
     public bool PlaceBuilding(Building building) {

@@ -1,0 +1,103 @@
+-Step by step setup guide (video/pdf)
+-script reference
+
+setup guide:
+
+1. Open the scene titled "main" and get to know the 
+   different objects in the hierarchy.
+
+2. Press play, the game is a physics based breakout game
+   where the paddle rotates. To move use AD, to spin use
+   left/right mouse or QE. Each time the paddle hits an
+   object, a sound is played. If it hits the bottom wall,
+   the player loses 1 point, and if it hits a brick, the
+   player gains 1 point and there is a chance to spawn a
+   powerup, which when collected has some effect on the
+   player. The game ends the time scale is halved and a
+   pause screen appears which lets the player restart or
+   quit the game.
+
+3. That's the game as is, to start changing things just take a
+   look at the various scripts! They are filled with helpful
+   comments that explain how things work. Also be sure to check
+   out the script reference to quickly get up to speed on
+   what you can do with the code right now.
+
+
+Script reference:
+
+HOW TO:
+1. Player behaviour
+2. Ball behaviour
+3. Brick behaviour 
+4. Effect system
+5. Game win conditions
+6. Automatic bounds
+
+
+1. Effect system
+	The first thing you may want to do is to
+	figure out how the powerup effect system
+	works. Check out the
+	Physics_Breakout_Kit > Scripts > Effects
+	folder to see each script relating to it.
+	Each powerup has a corresponding 
+	EffectType enum value. When adding a new
+	effect be sure to first add an EffectType
+	value, then in EffectHandler.ApplyEffect()
+	add a case to the switch statement with 
+	the new EffectType. This method is called
+	each time the player paddle makes contact
+	with a GameObject that has an
+	EffectCarrier script attached to it.
+
+Why did you use enums instead of inheritance for each effect type?
+	Because when spawning a random effect we
+	need to have a list of each type of effect.
+	this can be done with reflection but I felt
+	it easier to just use enums for clarity.
+
+2. Automatic bounds
+	This package features a neat script called
+	OrthoCameraColliderBounds.cs which places
+	a box collider on each edge of the screen.
+	It will allow you to change the size of your
+	playing screen without worrying about
+	messing up the game setup. The script is
+	located in Scripts > Helpers. It's placed
+	on a child of the GameManager gameobject.
+
+3. Game win conditions
+	The game condition scripts are all inside
+	of Scripts > GameState, here you can change
+	various aspects of the game state. You can
+	access game functions in these scripts like
+	EndOfGame.Reset(), which resets the game,
+	or GameCondition.CheckWinConditions() which
+	controls when the game ends.
+	
+4. Ball behaviour
+	There are two scripts which control the ball,
+	Ball.cs, and BallController.cs. Ball.cs 
+	handles the motion of the ball through the
+	level, with coroutines like Ball.SpeedController()
+	which ensures the balls motion falls within 
+	certain parameters (not too slow, or too horizontal).
+	The other script BallController controls the
+	placing and motion of the ball on the players
+	paddle before it's launched. Inside you'll find
+	methods to move and keep the ball on the paddle.
+
+5. Brick behaviour
+	All the brick scripts are in Scripts > Bricks.
+	BrickSpawner.cs is attached to a child of the
+	GameManager gameobject, it spawns the bricks
+	with BrickSpawner.SpawnBricks(). Each brick that
+	spawns has a Brick component attached, so use
+	that to have per brick logic.
+
+6. Player control
+	The PhysicsPaddleControl script is what controls
+	the paddle movement and rotation. It uses physics
+	to rotate and move the paddle.
+	

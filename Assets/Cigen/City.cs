@@ -21,7 +21,7 @@ public class City : MonoBehaviour {
         transform.position = position;
         this.settings = settings;
         metricConstraint = MetricFactory.Process(this.settings.metric, settings);
-        origin = CigenFactory.CreateOrMergeIntersection(position, this);
+        origin = CigenFactory.CreateOrMergeIntersection(RandomLocalPosition(), this);
     }
     
     //Creates an intersection at the position, returns an intersection if one already exists there (or close enough)
@@ -32,7 +32,7 @@ public class City : MonoBehaviour {
         if(nearest != null && dist <= settings.maxIntersectionMergeRadius) {
             return nearest;
         } else { 
-            Intersection temp = GameObject.CreatePrimitive(PrimitiveType.Cube).AddComponent<Intersection>();
+            Intersection temp = new GameObject().AddComponent<Intersection>();
             temp.Init(position, this);
             intersections.Add(temp);
             return temp;
@@ -69,7 +69,7 @@ public class City : MonoBehaviour {
         return newIntersection;
     }
 
-    private Vector3 RandomPosition() {
+    private Vector3 RandomLocalPosition() {
         Func<float, float> r = f => UnityEngine.Random.Range(-f, f);
         Vector3 pos = metricConstraint.ProcessPoint(new Vector3(r(settings.cityDimensions.x), r(settings.cityDimensions.y), r(settings.cityDimensions.z)));
         return pos;
@@ -114,7 +114,7 @@ public class City : MonoBehaviour {
     }
 
     public void AddRandomIntersectionToRoadNetwork() {
-        Vector3 p1 = RandomPosition();
+        Vector3 p1 = RandomLocalPosition();
 
         Vector3 bestPositionForIntersection = Vector3.one * float.MaxValue;
         Road roadToConnectTo = null;

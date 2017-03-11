@@ -17,7 +17,6 @@ public class RoadPath {
     public Vector3 startPosition;
     public Vector3 endPosition;
 
-    private List<Intersection> hiddenIntersections = new List<Intersection>();
     private City city;
 
     public RoadPath(Intersection parent, Intersection child) {

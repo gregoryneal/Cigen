@@ -2,3 +2,18 @@ potential roads are not being checked for validity before being placed
 building a road between intersection needs to take into consideration metric constraints so that it can alter the path a road takes to get from A to B. Maybe a new data type that holds an array of connected roads and intersections with a defined flow between them. Then the parent and child of the first and last ones could be exposed and just placed in the world that way.
 make intersections as of now only 4 roads, one on each face.
 minimum road length not enforced for metric
+
+have SpawnZones that are just different generators that can connect to each other, you can use a CitySettings for each one and roads connect between them. 
+For instance have a MainRoads zone that spawns your main roads, then have a ResidentialZone spawn in an open area with smaller roads, a different metric, etc.
+And the roads will try to connect to other roads.
+Place collider components on city generators for each zone so roads aren't placed in them. Also make spawning roads relative to the current city.
+
+implement maximum road length
+
+segment the CitySettings SO inspector variables into collapsible tabs, probably need to use an editor script...
+
+px:
+first quest: single residential area zone w/ 10 houses, each rdm chance of civilian spawning
+
+ideas:
+pomodoro timer app $1

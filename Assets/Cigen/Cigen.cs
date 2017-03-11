@@ -11,6 +11,8 @@ namespace Cigen
 
     #region Public
     public CitySettings settings;
+    public Cigen waitUntilBuilt;
+    public bool isBuilt = false;
     #endregion
 
     #region Private
@@ -22,7 +24,7 @@ namespace Cigen
     #region Unity Methods
 
     void Start() {
-        StartCoroutine(BuildCity(settings.initialCityPosition));
+        StartCoroutine(BuildCity(transform.position));
     }
 
     void OnDisable() {
@@ -32,6 +34,10 @@ namespace Cigen
     #endregion
 
     public IEnumerator BuildCity(Vector3 initState) {
+        if (waitUntilBuilt != null) {
+            yield return new WaitUntil(()=>waitUntilBuilt.isBuilt);
+        }
+        
         if (settings == null) {
             Debug.LogError("No CigenSettings detected, drag and drop one into the inspector.");
             yield break;
@@ -39,31 +45,29 @@ namespace Cigen
 
         //print("building city");
         int it = 0;
-        transform.position = initState;
         city = CigenFactory.CreateCity(initState, settings);
         while (true) {
             it++;
-            if (city.intersections.Count >= settings.maxNumberOfIntersections || it > settings.maxNumberOfIntersections * settings.intersectionPlacementAttempts) {
+            if (city.roads.Count >= settings.maxNumberOfRoads) {
                 break;
             }
             
             print("Starting next iteration...");
-            city.AddRandomIntersectionToRoadNetwork();            
+            city.AddRandomIntersectionToRoadNetwork();
             yield return new WaitForEndOfFrame();
-            //yield return new WaitUntil(()=>Input.GetKeyDown(KeyCode.Space));
         }
-        
-        while (true) {
-            if (city.buildings.Count >= settings.numBuildings)
-                break;
-            CigenFactory.CreateBuilding(city.RandomPlot());
-            yield return new WaitForEndOfFrame();
+
+        //Because new roads can make an intersection need rebuilding, lets
+        //wait until we finish generating every road before we generate intersection meshes.
+        foreach (Intersection i in city.intersections) {
+            yield return StartCoroutine(i.BuildMesh());
         }
 
         print("Intersections: " + city.intersections.Count);
         print("Roads: " + city.roads.Count);
         print("Plots: " + city.plots.Count);
         print("Iterations: " + it);
+        this.isBuilt = true;
         yield break;
     }
 

@@ -3,28 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cigen.MetricConstraint;
 
-[CreateAssetMenu(fileName = "CitySettings", menuName = "Cigen/CitySettings", order = 1)]
+[CreateAssetMenu(fileName = "New City Settings", menuName = "Cigen/CitySettings", order = 1)]
 public class CitySettings : ScriptableObject {
     [Header("City settings")]
-    public Vector3 cityDimensions = new Vector3(3000, 0, 3000); //total city bounds
-    public Vector3 initialCityPosition = Vector3.zero; //starting position of the city
+    public Vector3 cityDimensions = new Vector3(100, 0, 100); //total city bounds
 
     [Space(10)]
     [Header("Road settings")]
     public Texture2D roadTexture;
-    public Vector2 roadDimensions = new Vector2(20, 1); //dimensions of the lines that are drawn, eventually to be replaced by a mesh
-    public bool animateRoadBuilding = false;
-    public float roadBuildSpeed = 20f;
-    public float minimumRoadLength = 40f;
-    public float minimumNearbyRoadAngleSimilarity = 10f;
+    public UnityEngine.Vector2 roadDimensions = new UnityEngine.Vector2(2, .75f); //dimensions of the lines that are drawn, eventually to be replaced by a mesh
+    public int maxNumberOfRoads = 100;
+    public float minimumRoadLength = 5f;
 
     [Space(10)]
     [Header("Intersection settings")]
     public int maxNumberOfIntersections = 150;
-    public int intersectionPlacementAttempts = 20; //amount of intersection placement attempts per individual intersection
-    public float maxIntersectionMergeRadius = 30f; //how close a proposed intersection must to another intersection before they are merged
-    [MinMaxRange(0, 60)]
-    public MinMaxRange randomIntersectionSearchRadius;
+    public int intersectionPlacementAttempts = 8; //amount of intersection placement attempts per individual intersection
+    public float maxIntersectionMergeRadius = 2; //how close a proposed intersection must to another intersection before they are merged
+    [HideInInspector]
+    public float maxIntersectionVerticesMergeRadius = 0.001f; //how close do the vertices have to be to be combined in the mesh
 
     [Space(10)]
     [Header("Plot settings")]
@@ -41,5 +38,7 @@ public class CitySettings : ScriptableObject {
 
     [Space(10)]
     [Header("Metric settings")]
-    public MetricSpace metric = MetricSpace.MANHATTAN;
+    public MetricSpace metric = MetricSpace.GRID;
+
+    //dd
 }
