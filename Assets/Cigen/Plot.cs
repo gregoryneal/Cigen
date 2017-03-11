@@ -23,6 +23,8 @@ public class Plot : MonoBehaviour {
         this.city = road.city;
         this.side = side;
         this.city.plots.Add(this);
+
+        transform.parent = road.transform;
         Build();
     }
 
@@ -32,10 +34,14 @@ public class Plot : MonoBehaviour {
             sideDirection *= -1;
         }
 
-        transform.position = city.transform.position + road.transform.position + (sideDirection * (city.settings.plotPadding + ((city.settings.maxPlotWidth + city.settings.roadDimensions.x) / 2f)));
-        transform.localScale = new Vector3(city.settings.maxPlotWidth, Random.value * 0.5f, road.length - (2*city.settings.plotPadding));
+        float halfRoadLength = road.length / 2f;
+        if (halfRoadLength < city.settings.minPlotWidth) return;
+
+        transform.position = road.transform.position +
+                            (road.direction * road.length / 2f) + 
+                            sideDirection * (city.settings.plotPadding + ((city.settings.plotWidth + city.settings.roadDimensions.x) / 2f));
+        transform.localScale = new Vector3(city.settings.plotWidth, Random.value * 0.5f, Mathf.Abs(road.length - (2*city.settings.plotPadding)));
         transform.rotation = Quaternion.LookRotation(road.direction);
-        transform.SetParent(road.transform);        
     }
 
     public bool PlaceBuilding(Building building) {
@@ -57,7 +63,7 @@ public class Plot : MonoBehaviour {
         float rnd2 = UnityEngine.Random.value;
         Vector3 start = road.parentNode.Position + (road.direction * city.settings.plotPadding);
         Vector3 end = road.childNode.Position - (road.direction * city.settings.plotPadding);
-        Vector3 pos = Vector3.Lerp(start, end, rnd1) + (sideDirection * (Mathf.Lerp(0, city.settings.maxPlotWidth, rnd2) + city.settings.plotPadding + city.settings.roadDimensions.x));
+        Vector3 pos = Vector3.Lerp(start, end, rnd1) + (sideDirection * (Mathf.Lerp(0, city.settings.plotWidth, rnd2) + city.settings.plotPadding + city.settings.roadDimensions.x));
         return pos;
     }
 }

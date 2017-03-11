@@ -37,13 +37,13 @@ public static class HullMesher2D {
         m.triangles = TriangulateHull(vs);
 
         m.RecalculateNormals();
-        m.RecalculateBounds(); //calculate the bounds before calculating UV's
+        m.RecalculateBounds(); //calculate the bounds before calculating uvs
 
         Vector2[] uvs = new Vector2[vertices.Length];
         Bounds bounds = m.bounds;
         int i = 0;
         while (i < uvs.Length) {
-            uvs[i] = new Vector2(vertices[i].x + bounds.extents.x, vertices[i].y / bounds.size.z); // simple planar uv mapping
+            uvs[i] = new Vector2(vertices[i].x + bounds.extents.x, vertices[i].y / bounds.size.z); // planar uv mapping
             i++;
         }
         m.uv = uvs;
@@ -80,7 +80,6 @@ public static class HullMesher2D {
         //Then 
         //It only works for convex hulls.
         while (V.Count > 0) {
-            int[] newTriangle = new int[3]; //EnsureCorrectOrdering(randomSelected, secondVertexInTriangle, V.Peek());
             tris.Add(randomSelected.index);
             tris.Add(secondVertexInTriangle.index);
 

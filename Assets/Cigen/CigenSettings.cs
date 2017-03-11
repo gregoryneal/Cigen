@@ -26,7 +26,8 @@ public class CitySettings : ScriptableObject {
     [Space(10)]
     [Header("Plot settings")]
     public float plotPadding = 5f;
-    public float maxPlotWidth = 20f;
+    public float plotWidth = 20f; //how deep perpendicular to the road should we build the plot
+    public float minPlotWidth = 6f;
     [Range(2, 10)]
     public int plotResolution = 2;
 
@@ -38,7 +39,7 @@ public class CitySettings : ScriptableObject {
 
     [Space(10)]
     [Header("Metric settings")]
-    public MetricSpace metric = MetricSpace.GRID;
+    public MetricSpace metric = MetricSpace.EUCLIDEAN;
 
     //dd
 }

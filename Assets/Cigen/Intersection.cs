@@ -64,12 +64,12 @@ public class Intersection : MonoBehaviour {
     private List<Vector3> LocalSpaceVertices() {
 
         if (verts.Count > 0) {
-            print("Found " + verts.Count + " vertices to draw!");
+            //print("Found " + verts.Count + " vertices to draw!");
             return verts;
         }
         
         List<Vector3> v = new List<Vector3>();
-        print("Drawing default square!");
+        //print("Drawing default square!");
         float roadWidth = city.settings.roadDimensions.x;
         v.Add((roadWidth / 2f) * (-transform.forward - transform.right));
         v.Add((roadWidth / 2f) * (transform.forward - transform.right));
@@ -83,9 +83,6 @@ public class Intersection : MonoBehaviour {
 
         if (roads.Count < 2) yield break;
 
-        //yield return FocusOn();
-
-        float roadWidth = city.settings.roadDimensions.x;
         float roadHeight = city.settings.roadDimensions.y;
         Texture texture = city.settings.roadTexture;
 
@@ -93,7 +90,7 @@ public class Intersection : MonoBehaviour {
         
 
         if (vertices.Length < 3) { 
-            print("Not enough vertices to make a shape! Vertex count: " + vertices.Length);
+            //print("Not enough vertices to make a shape! Vertex count: " + vertices.Length);
             yield break;
         }
 
@@ -123,8 +120,7 @@ public class Intersection : MonoBehaviour {
         m.RecalculateNormals();
         m.RecalculateBounds();
 
-        print("Finished building intersection.");
-        //yield return FocusOn();
+        //print("Finished building intersection.");
         yield break;
     }
 

@@ -52,7 +52,7 @@ namespace Cigen
                 break;
             }
             
-            print("Starting next iteration...");
+            //print("Starting next iteration...");
             city.AddRandomIntersectionToRoadNetwork();
             yield return new WaitForEndOfFrame();
         }
@@ -61,6 +61,11 @@ namespace Cigen
         //wait until we finish generating every road before we generate intersection meshes.
         foreach (Intersection i in city.intersections) {
             yield return StartCoroutine(i.BuildMesh());
+        }
+
+        foreach (Road r in city.roads) {
+            r.ZonePlots();
+            yield return new WaitForEndOfFrame();
         }
 
         print("Intersections: " + city.intersections.Count);

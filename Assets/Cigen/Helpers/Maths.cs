@@ -52,7 +52,7 @@ namespace Cigen.Maths
             float angle = Mathf.Atan2(direction.y,  direction.x) * Mathf.Rad2Deg;
             if (angle < 0f) angle += 360f;
 
-            /*
+            /* Thought this was needed at one point, it may still be useful just not yet...
             float closeEnough = 0.001f;
             if (Mathf.Abs(angle) <= closeEnough) angle = 0f;
             if (Mathf.Abs(angle - 90f) <= closeEnough) angle = 90f;

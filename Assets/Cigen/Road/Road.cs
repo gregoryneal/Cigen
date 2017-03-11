@@ -75,8 +75,6 @@ public class Road : MonoBehaviour {
         vertices[2] = (transform.forward * length) + (transform.right * roadWidth / 2f);
         vertices[3] = transform.right * roadWidth / 2f;
 
-        int[] triangles = new int[] { 0, 1, 2, 2, 3, 0 };
-
         Vector2 mainTexScale;
         GetComponent<MeshFilter>().mesh = HullMesher2D.BuildPolygon(vertices, out mainTexScale);        
         Material mat = GetComponent<MeshRenderer>().material;
@@ -115,7 +113,6 @@ public class Road : MonoBehaviour {
             //maybe add these vertices to the intersections vertex list?
             parentNode.AddVerts(a(vertices[0], parentNode.transform), a(vertices[3], parentNode.transform));
             childNode.AddVerts(a(vertices[1], childNode.transform), a(vertices[2], childNode.transform));
-            print("");
         }
     }
 
