@@ -1,4 +1,4 @@
-# Cigen [WIP]
+# Cigen
 A procedural city generator built for Unity.
 
 Goal: To provide procedural placement of roads and buildings for use in Unity games.
