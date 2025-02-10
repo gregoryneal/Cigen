@@ -1,7 +1,7 @@
 # Cigen
 A procedural city generator built for Unity.
 
-NOTE: ~~This project is pretty dead due to lost interest, I may pick it up in the future but as of now not likely.~~ I am actively working on this project again.
+NOTE: ~~This project is pretty dead due to lost interest, I may pick it up in the future but as of now not likely.~~ **I am actively working on this project again.**
 
 Goal: To provide procedural placement of roads and buildings for use in Unity games.
 
