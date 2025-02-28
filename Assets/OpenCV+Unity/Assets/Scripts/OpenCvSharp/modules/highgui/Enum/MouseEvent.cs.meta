@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: a7fc6be280279d64e9db91a97f3b01bf
+timeCreated: 1510768039
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/highgui/Enum/MouseEvent.cs
+  uploadId: 213478

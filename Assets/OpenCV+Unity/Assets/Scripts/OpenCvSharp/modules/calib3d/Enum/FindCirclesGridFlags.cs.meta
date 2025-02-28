@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 27b7c09aa4bb88044958d7816d8cd5b7
+timeCreated: 1510768033
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/calib3d/Enum/FindCirclesGridFlags.cs
+  uploadId: 213478

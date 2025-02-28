@@ -41,15 +41,15 @@ public class RoadPath {
         
         if (exposedHead == null) //initialized with Init(Intersection, Intersection);
         {
-            start = CigenFactory.CreateOrMergeIntersection(startPosition, city);
+            start = city.CreateOrMergeNear(startPosition);
         }
         if (exposedChild == null) {
-            end = CigenFactory.CreateOrMergeIntersection(endPosition, city);
+            end = city.CreateOrMergeNear(endPosition);
         }
 
         Intersection curr = start;
         foreach (Vector3 v in path) {
-            Intersection newIntersection = CigenFactory.CreateOrMergeIntersection(v, city);
+            Intersection newIntersection = city.CreateOrMergeNear(v);
             CigenFactory.CreateRoad(curr, newIntersection);
             curr = newIntersection;
         }

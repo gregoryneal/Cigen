@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 24429c3a145a20d4fb3a5f4e636e7f8d
+timeCreated: 1510768033
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/text/TextDetection.cs
+  uploadId: 213478

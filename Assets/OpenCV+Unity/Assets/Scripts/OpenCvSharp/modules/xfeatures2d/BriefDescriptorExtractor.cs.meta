@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 02435a260e695234e86c2a60d146f37f
+timeCreated: 1510768031
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/xfeatures2d/BriefDescriptorExtractor.cs
+  uploadId: 213478

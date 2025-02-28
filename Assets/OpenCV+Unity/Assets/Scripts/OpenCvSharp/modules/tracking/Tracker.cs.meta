@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 8a24492f371b8c04c8096c1a39511423
+timeCreated: 1510768037
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/tracking/Tracker.cs
+  uploadId: 213478

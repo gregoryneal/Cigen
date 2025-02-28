@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 3128c84a9a9122c4dbf893d455f6ee52
+timeCreated: 1510768033
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/PInvoke/video/NativeMethods_video.cs
+  uploadId: 213478

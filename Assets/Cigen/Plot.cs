@@ -20,7 +20,7 @@ public class Plot : MonoBehaviour {
 
 	public void Init(Road road, PlotRoadSide side) {
         this.road = road;
-        this.city = road.city;
+        this.city = road.City;
         this.side = side;
         this.city.plots.Add(this);
 
@@ -29,19 +29,19 @@ public class Plot : MonoBehaviour {
     }
 
     public void Build() {
-        sideDirection = Vector3.Cross(road.direction, road.transform.up).normalized;
+        sideDirection = Vector3.Cross(road.Direction, road.transform.up).normalized;
         if (side == PlotRoadSide.PLOTRIGHT) {
             sideDirection *= -1;
         }
 
-        float halfRoadLength = road.length / 2f;
-        if (halfRoadLength < city.settings.minPlotWidth) return;
+        float halfRoadLength = road.Length / 2f;
+        if (halfRoadLength < city.Settings.minPlotWidth) return;
 
         transform.position = road.transform.position +
-                            (road.direction * road.length / 2f) + 
-                            sideDirection * (city.settings.plotPadding + ((city.settings.plotWidth + city.settings.roadDimensions.x) / 2f));
-        transform.localScale = new Vector3(city.settings.plotWidth, Random.value * 0.5f, Mathf.Abs(road.length - (2*city.settings.plotPadding)));
-        transform.rotation = Quaternion.LookRotation(road.direction);
+                            (road.Direction * road.Length / 2f) + 
+                            sideDirection * (city.Settings.plotPadding + ((city.Settings.plotWidth + city.Settings.roadDimensions.x) / 2f));
+        transform.localScale = new Vector3(city.Settings.plotWidth, Random.value * 0.5f, Mathf.Abs(road.Length - (2*city.Settings.plotPadding)));
+        transform.rotation = Quaternion.LookRotation(road.Direction);
     }
 
     public bool PlaceBuilding(Building building) {
@@ -61,9 +61,9 @@ public class Plot : MonoBehaviour {
     public Vector3 RandomPosition() {
         float rnd1 = UnityEngine.Random.value;
         float rnd2 = UnityEngine.Random.value;
-        Vector3 start = road.parentNode.Position + (road.direction * city.settings.plotPadding);
-        Vector3 end = road.childNode.Position - (road.direction * city.settings.plotPadding);
-        Vector3 pos = Vector3.Lerp(start, end, rnd1) + (sideDirection * (Mathf.Lerp(0, city.settings.plotWidth, rnd2) + city.settings.plotPadding + city.settings.roadDimensions.x));
+        Vector3 start = road.parentNode.Position + (road.Direction * city.Settings.plotPadding);
+        Vector3 end = road.childNode.Position - (road.Direction * city.Settings.plotPadding);
+        Vector3 pos = Vector3.Lerp(start, end, rnd1) + (sideDirection * (Mathf.Lerp(0, city.Settings.plotWidth, rnd2) + city.Settings.plotPadding + city.Settings.roadDimensions.x));
         return pos;
     }
 }

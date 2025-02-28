@@ -1,0 +1,96 @@
+- add highways as a start point
+
+- plots overlapping on roads
+- add building density property on plot
+- intersection textures are incorrectly aligned, maybe add option for 2,3,4 way intersections, when 1 way intersections occur, adjust the texture to fit.
+- generate buildings and houses
+- assign texture to roads and buildings
+- curved roads?
+
+
+NEW CIGEN SETTINGS:
+
+Points of Interest: create a road network between all POIs
+Areas of Interest: create a road network that includes an intersection near all AOIs
+
+
+BASE DESIGN OFF THIS PAPER: https://pdf.sciencedirectassets.com/308315/1-s2.0-S2352146515X00081/1-s2.0-S2352146515002690/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEJb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIQDP3j8i0mEk%2F26sthp9kx3Ex3X3O1%2FCuh0ElLBmvDXuHAIgUBRF50DRrZpv4Bnuw60sUpuHn%2BZos0U3Q46LsZjzpCIquwUIr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAFGgwwNTkwMDM1NDY4NjUiDFIVTrpMUJDINFzzkyqPBUFKMBf%2BJBj90hRYfT019HdYJKIUBa549GMIgMEaAY%2BU2QKru5hEqxES4c0P02gcCR41gMYcORbka4fiBWyhi1prnyXugpunlOQVS1hhEz90WmK8t%2Baq0NVFxqCRqDnl891HAbfi4Dy3ya8Lk8wZE%2BM0qQIsn1iN61ZMtoI%2FE7%2BVG7s1TOzG%2BFDEYI%2FLP3KV1GTx3mnse3FdPISHTOhfRBr08PAUVUhm4L8KDyfyZyqFXh7qThSm71pSWOndIcbnWAKy7bru4Eu%2BcPjgUHtI8Jr3rldzGXSZImYrR%2BOrR0UXaySgvFCC6LRwp%2BSFWTsm7YSw30p7rEkkxY1Q51ZTURD2gk1brKhv7%2BHCYYPowlYeZyH2L1IeYaUQnhRDxQP%2F7Vv%2BheDt6T7%2BOqTmV%2F6ovHd%2BWQ2DfQm6Ko1jAr4wpVITSlhcUtEn6VM6uzFMMIT2liqefHdLCIbCEAxdHPVcR74gqoKoXFbp6%2F%2Bg0J1Sc0a1neAFsAYUpv6PkdpYec2oOvUWbttIfLiSpYk8BpQXfi0Nziv1u1d7vW8GaNlUXo3DuFtCm%2B3Fk3gxMjlNf8NDLtHBnnLo6ueMvKzjEX40P1ONM4XP8LMIl%2FOOC9THe6HLz4hVefnprPSzI7EuxVsk4wfcsmsXvpq1Dsk1ZpYJlfy7HZaYqcO8khMCC%2Fg1vboT%2B5ChMGb4bOWY4tDK%2FwGkyQPkGltHDaCCyOpe1wJUCkL1bUXKsI7vllcNZnoDSGPQlLHpQmqQyDTtFMW%2FnM5MlzdH%2Fo70gyEKzlrmkAhomK2ntOV%2FwsRK4G7PlViAWt4BdlJPvTQ2BGwVMaQ0UZksBghLOkXUmwhIzslQh9Ywx4talVWi9%2BpSuCeza6UetI8wqMGkvQY6sQFcoeBP7Pt1eQ7ZddC9gLTK5XuKFqAi9VgkIt6tRKuAijbqH5c4wg2fR2zf5FPmEczURTwIcT6N6HGADKFCWkjk4%2Bv7lrgSpEkzy882cNCS6EhFgZZn%2F7gpX2P1x4bOsxN7sPLdvi03vv5X6JvVURp%2FQyeFZoq5OPtmN7V2GRQfkgSoFsLPY9R%2FkcdfHjBjuxOpnHahl%2FAsMa8uuXSRrnD2Q8c%2B%2FB2QWdMPS0XAb4QVq2Y%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250209T221708Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYTIJ6YHW6%2F20250209%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=93908b65716db985c06f9e349e5cf56fce0dbe8f2acf80216e24aeeb3cc9b61d&hash=aefa973f91f7422977866a8afbe86d6b4052566574fc0ad4872b8f1a0644e5d6&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=S2352146515002690&tid=spdf-d5128d2d-3352-44d8-b09a-7b4c74a3d0d8&sid=a61f0c6a75d3b34747094ac4aafe13806dbegxrqa&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=16155d5005515d0751&rr=90f73a506f92e661&cc=us
+
+and this paper: https://cgl.ethz.ch/Downloads/Publications/Papers/2001/p_Par01.pdf
+this paper helps with understanding the L System as it is used in the algorithm: https://liu.diva-portal.org/smash/get/diva2:1467574/FULLTEXT01.pdf
+
+
+
+TLDR: 
+
+Implement hierarchical zone model by generating outer regions before inner regions. Main input variables include a population density map, urban area percentage, and the land use percentages.
+f(P,A,L) -> Cigen Model. Of course we will keep our other parameters for fine tuning. 
+
+Population density is used as an input that creates the road network and land use layers. Metric constraints will constrain how the roads are shaped. 
+
+The road network and land use layers will each have three spatial regions: the outer region is the highway/arterial region, the middle is the distributer region, the smallest is the local access region. 
+Each spatial region has its own land use algorithms. The highway is divvied into districts, the distributer layer is divvied into neighborhoods and the local access level is divvied into lots. 
+
+
+HIGH LEVEL ALGORITHMIC MODEL: 
+- Scan population density map for peaks
+- create highways between peaks
+- fill in the rest with neighborhoods
+- highways and streets follow the same road generation patterns, with potentially different goals
+
+ROAD GENERATION RULES:
+- pick initial point in a favorable spot, place an intersection there using global goals and local constraints. 
+- every iteration do the following
+- use global goals function to attempt to place new intersection and connect the road, these goals are things like min/max road length, population density (higher means shorter roads), desired road type (ringed highways for example), metric constraints etc
+- once a point is picked, use local constraints to alter the position or take other actions. These constraints are things like terrain steepness, water/unpassable terrain, existing road intersections, etc.
+- once a point is passed through the local constraints then it is built. 
+
+DIFFERENCES BETWEEN HIGHWAYS AND STREETS:
+- highways follow the steepest population density gradient. AKA they to from population center to population center
+- smaller streets follow the dominant generation pattern or metric constraint
+
+
+
+TYPES OF HIGHWAYS: 
+
+- Straight pass, will just be one major artery through the city.
+- Double Straight pass, like straight pass, but two of them.
+- Ring, will go around the city in a circle
+- Layered ring, like ring, but with more of them. Number of rings in the settings along with stuff like min distance to urban area etc. 
+
+
+WHERE DID U LEAVE OFF?
+Generating contours using OpenCV to find population centers to begin a heuristic parameterized L system that generates road networks.
+
+Feb 14 2025
+You can map textures to terrain and map world points to texture points and visa versa. The problem was simply how OpenCV reads pixel values
+combined with how the Terrain gameobject maps height values. Now you should continue constructing the City.CreateHighways() method.
+First implement the highwayMap texture for ring roads, throughputs and bypasses. You should average all of the channels in the contour area, create a selector function
+that maps RGB to a HighwayType Enum -> RING, BYPASS, THROUGHPASS in order to select which type of highway to use. Then generate them one at a time. 
+Once an outer highway network has been generated, we try to connect them to each other. We should define some values for things like maximum 
+bridge length, and some other global goal oriented outcomes. 
+
+Feb 15 2025
+You have redesigned the algorithm after finding a reddit post that summarized Parish and Mullers work with a queue combined with rules. You've spent the day once again
+adding a bunch of helper functions that are going to make the algorithmic part a breeze eventually. You can generate a road segment in a random population center, now
+you just need to implement the local constraints and the branching functions (global goals). The paper is bookmarked so read it more. You should pick up in 
+CityGenerator.LocalConstraints() to implement the pruning and stuff that muller and parish describe in section 3.3 of the paper. But first figure out why RoadSegment.EndPosition
+is properly using the highway Y offset setting, but the RoadSegment.StartPosition is sitting on the terrain (offset 0).
+
+Feb 16 2025
+You have gotten the queue system working with the global goals and local constraints, but new roads are not obeying the max angle limits, investigate and continue working on the algorithm.
+Another problem is that multiple road segments are being generated and instantiated in the same place. If the max number of highways is MAX then we are generating (2*MAX)+1 gameobjects with each 
+iteration. this could have something to do with the initaxiom not being part of the queue stuff, but check it out anyway.
+
+Feb 17 2025
+More rules are nice, but your Conversions.WorldToTextureSpace function is fucked up. FIX IT PLEASE! OR AT LEAST INVESTIGATE IT LOL. IT WASN"T THAT FUNCTION.
+Something is up with the position sampling in the global goals functions. The sampling mechanism seems to be unable to accurately detect sample values or something. HMMM
+
+Feb 19 2025
+So what was ultimately the problem was the sampling algorithm, I didn't properly idiot proof it and it would sample 0 in a denominator a bunch, giving the sample a value of INFINITY.
+Then it just picked the first value in the list because they were all the same. That's why the roads kept meandering in a circle forever. Next we need to implement an adhoc connectivity
+ruleset for the initial highway generation. Right now we have a connectivity list and are iterating over it connecting one city to another if it isn't already connected, spawning a
+highway node with a goal to reach the other city. We want to do some rudimentary checks to make sure connection goals aren't passing directly through another PC, if so then create
+a goal at another random point in the intersecting PC, and a node at the goal, with its own goal at the original goal location. Make this check recursive so that we generate node points
+at all intersecting PCs along the initial connection point. Also implement a rule that prevents highway nodes from spawning too close together. It's starting to come together... 
+This weekend will be legendary if my brain anyeurism doesn't take me first...

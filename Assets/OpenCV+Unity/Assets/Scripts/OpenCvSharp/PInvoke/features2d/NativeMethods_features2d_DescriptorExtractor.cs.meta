@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 2259083b4cf9a3a41b50a675227847c5
+timeCreated: 1510768033
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/PInvoke/features2d/NativeMethods_features2d_DescriptorExtractor.cs
+  uploadId: 213478

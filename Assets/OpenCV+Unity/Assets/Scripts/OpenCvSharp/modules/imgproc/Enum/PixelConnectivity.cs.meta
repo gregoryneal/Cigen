@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: ac4ac3493b513a54a9647cd237b3f8b1
+timeCreated: 1510768039
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/imgproc/Enum/PixelConnectivity.cs
+  uploadId: 213478

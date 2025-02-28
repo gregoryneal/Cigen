@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 5a64c4cc44d9aa44dbcf4caf9f7e622e
+timeCreated: 1510768035
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Demo/Identifiy_Contours_by_Shape/ContoursByShapeScript.cs
+  uploadId: 213478

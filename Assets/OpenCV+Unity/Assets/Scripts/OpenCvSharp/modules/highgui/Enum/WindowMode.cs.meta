@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 54507cefec0d3cf47b5512cb631d4c0d
+timeCreated: 1510768034
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/highgui/Enum/WindowMode.cs
+  uploadId: 213478

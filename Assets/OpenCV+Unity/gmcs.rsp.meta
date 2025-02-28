@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 55f1637487072db46bf37a0321d426fb
+timeCreated: 1511104627
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/gmcs.rsp
+  uploadId: 213478

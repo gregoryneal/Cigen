@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 28eb7bc54b7ecd042985c9754c354f66
+timeCreated: 1510768050
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Documentation/OpenCV+Unity_Notes.txt
+  uploadId: 213478

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 6dc5f00c8cdaba54c84553293becde8a
+timeCreated: 1510768036
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/core/Struct/Point3i.cs
+  uploadId: 213478

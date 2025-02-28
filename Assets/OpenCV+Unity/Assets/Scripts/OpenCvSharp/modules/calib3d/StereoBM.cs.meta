@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: e6a6da88a13d8f34da104b7e24e3412c
+timeCreated: 1510768042
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/calib3d/StereoBM.cs
+  uploadId: 213478

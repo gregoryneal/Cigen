@@ -9,21 +9,21 @@ using Cigen.Factories;
 [RequireComponent(typeof(MeshRenderer))]
 public class Road : MonoBehaviour {
 
-	public City city { get; private set; }
+	public City City { get; private set; }
 	public Intersection parentNode;
 	public Intersection childNode;
-    public bool built { get; private set; }
-    public float length { get; private set; }
-    public Vector3 direction { get; private set; }    
+    public bool Built { get; private set; }
+    public float Length { get; private set; }
+    public Vector3 Direction { get; private set; }    
     public Vector3 Midpoint {
         get {
            return Vector3.Lerp(parentNode.Position, childNode.Position, 0.5f); 
         }
     }
-    public Plot leftPlot { get; private set; }
-    public Plot rightPlot { get; private set; }
+    public Plot LeftPlot { get; private set; }
+    public Plot RightPlot { get; private set; }
 
-    public Vector3[] worldSpaceVertices { get; private set; } //all vertices
+    public Vector3[] WorldSpaceVertices { get; private set; } //all vertices
     private Dictionary<Intersection, List<Vector3>> intersectionConnectedVertices = new Dictionary<Intersection, List<Vector3>>(); //these are vertices of the road in world space. They are meant to be consumed by each connecting intersection, which converts them into it's own local space to use as vertices for it's own mesh, so everything matches up nicely ;)
 
 	public void Init(Intersection parent, Intersection child, City city) {
@@ -34,10 +34,10 @@ public class Road : MonoBehaviour {
 
 		this.parentNode = parent;
 		this.childNode = child;
-		this.city = city;
-        this.built = false;
-        this.length = Vector3.Distance(parentNode.Position, childNode.Position);
-        this.direction = (childNode.Position - parentNode.Position).normalized;
+		this.City = city;
+        this.Built = false;
+        this.Length = Vector3.Distance(parentNode.Position, childNode.Position);
+        this.Direction = (childNode.Position - parentNode.Position).normalized;
         
         intersectionConnectedVertices[parentNode] = new List<Vector3>();
         intersectionConnectedVertices[childNode] = new List<Vector3>();
@@ -48,20 +48,22 @@ public class Road : MonoBehaviour {
         parent.ConnectToIntersection(child);
         city.roads.Add(this);
         transform.parent = city.transform;
+        //transform.localScale = new Vector3(1, 1, 1/Length);
+        //transform.localPosition = Vector3.Lerp(parentNode.Position, childNode.Position, 0.5f);
 	}
 
     public void Rebuild() {
-        built = false;
+        Built = false;
         BuildMesh();
     }
 
     public void BuildMesh() {
-        float roadWidth = city.settings.roadDimensions.x;
-        float roadHeight = city.settings.roadDimensions.y;
-        Texture texture = city.settings.roadTexture;
+        float roadWidth = City.Settings.roadDimensions.x;
+        float roadHeight = City.Settings.roadDimensions.y;
+        Texture texture = City.Settings.roadTexture;
 
-        Vector3 from = city.transform.TransformPoint(parentNode.Position);
-        Vector3 to = city.transform.TransformPoint(childNode.Position);
+        Vector3 from = City.transform.TransformPoint(parentNode.Position);
+        Vector3 to = City.transform.TransformPoint(childNode.Position);
         Vector3 direction = (from - to).normalized;
         Vector3 offset = direction * roadWidth / 2f;
         from -= offset; //so the endings don't go all the way to the point, they line up neatly with intersections
@@ -116,31 +118,32 @@ public class Road : MonoBehaviour {
         }
     }
 
+//TODO: rework this so that plots that overlap an existing plot will resize itself to fit
     public void ZonePlots() {
-        if (length < city.settings.minimumRoadLength)
+        if (Length < City.Settings.minimumRoadLength)
             return;
 
-        if (this.leftPlot != null)
-            Destroy(this.leftPlot.gameObject);
-        if (this.rightPlot != null)
-            Destroy(this.rightPlot.gameObject);
+        if (this.LeftPlot != null)
+            Destroy(this.LeftPlot.gameObject);
+        if (this.RightPlot != null)
+            Destroy(this.RightPlot.gameObject);
 
         Plot[] plots = CigenFactory.CreatePlots(this);
-        this.leftPlot = plots[0];
-        this.rightPlot = plots[1];
+        this.LeftPlot = plots[0];
+        this.RightPlot = plots[1];
     }
 
     //TODO: Add removal of vertices from intersection dictionary
     public void Remove() {
         parentNode.RemoveConnection(childNode);
-        city.roads.Remove(this);
-        if (leftPlot != null) { 
-            city.plots.Remove(leftPlot);
-            Destroy(leftPlot.gameObject);
+        City.roads.Remove(this);
+        if (LeftPlot != null) { 
+            City.plots.Remove(LeftPlot);
+            Destroy(LeftPlot.gameObject);
         }
-        if (rightPlot != null) { 
-            city.plots.Remove(rightPlot);
-            Destroy(rightPlot.gameObject);
+        if (RightPlot != null) { 
+            City.plots.Remove(RightPlot);
+            Destroy(RightPlot.gameObject);
         }
         Destroy(gameObject);
     }
@@ -151,7 +154,7 @@ public class Road : MonoBehaviour {
             localSpaceVertices[i] = transform.TransformPoint(localSpaceVertices[i]);
         }
 
-        worldSpaceVertices = localSpaceVertices;
+        WorldSpaceVertices = localSpaceVertices;
     }    
 
     public List<Vector3> GetVerticesForIntersection(Intersection intersection) {

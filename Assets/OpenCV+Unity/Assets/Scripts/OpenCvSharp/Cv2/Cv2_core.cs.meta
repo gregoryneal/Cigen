@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 911d379d6ac435f4496de6a7f6350cf0
+timeCreated: 1510768037
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/Cv2/Cv2_core.cs
+  uploadId: 213478

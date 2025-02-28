@@ -28,10 +28,10 @@ namespace Cigen.MetricConstraint {
         }
 
         //Same as ProcessPath except no endpoints are returned
-        public virtual List<Vector3> ProcessPathNoEndpoints(Vector3 start, Vector3 end) {
+        public List<Vector3> ProcessPathNoEndpoints(Vector3 start, Vector3 end) {
             List<Vector3> pathWithEndpoints = ProcessPath(start, end);
-            //pathWithEndpoints.Remove(start);
-            //pathWithEndpoints.Remove(end);
+            pathWithEndpoints.Remove(start);
+            pathWithEndpoints.Remove(end);
             return pathWithEndpoints;
         }
     }

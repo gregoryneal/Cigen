@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: c3379fe8fb86085428c934ffaa8126fe
+timeCreated: 1510768040
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/PInvoke/ml/NativeMethods_ml_StatModel.cs
+  uploadId: 213478

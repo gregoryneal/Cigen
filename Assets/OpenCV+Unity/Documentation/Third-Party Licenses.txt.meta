@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3207569d554e97f41ac03ce457bd706b
+timeCreated: 1510768051
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Documentation/Third-Party Licenses.txt
+  uploadId: 213478

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 71399bf463f6269438141fbc6e0b2a42
+timeCreated: 1510768036
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 85928
+  packageName: OpenCV plus Unity
+  packageVersion: 1.7
+  assetPath: Assets/OpenCV+Unity/Assets/Scripts/OpenCvSharp/modules/core/Struct/Vecd.cs
+  uploadId: 213478

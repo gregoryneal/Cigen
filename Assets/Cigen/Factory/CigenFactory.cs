@@ -1,46 +1,35 @@
 ﻿using UnityEngine;
 using Cigen.MetricConstraint;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Cigen.Factories { 
+
     public class CigenFactory {
         /// <summary>
         /// Creates a straight line Road connected to two Intersections.
+        /// Will not create a road that overlaps another road
         /// </summary>
         /// <param name="head"></param>
         /// <param name="tail"></param>
         /// <param name="name"></param>
         /// <returns></returns>
-        public static Road CreateRoad(Intersection head, Intersection tail, string name = "Road") {
+        public static void CreateRoad(Intersection head, Intersection tail, string name = "Road") {
+            City city = head.city;
+            //check if this road is close to another road
+            /*if (city.intersections.Where(i => (i.Position - head.Position).magnitude <= city.settings.maxIntersectionMergeRadius).Count() > 0 ||
+                city.intersections.Where(i => (i.Position - tail.Position).magnitude <= city.settings.maxIntersectionMergeRadius).Count() > 0) {
+                    return;
+            }*/
+            /*
+            if (city.intersections.Where(i => i.Position == head.Position).Count() > 0 ||
+                city.intersections.Where(i => i.Position == tail.Position).Count() > 0) {
+                    return;
+            }*/
             Road road = new GameObject(name).AddComponent<Road>();
             road.Init(head, tail, head.city);
-            return road;
-        }
-
-        /// <summary>
-        /// Creates a path of Roads constraining to the city metric between two Intersections.
-        /// </summary>
-        /// <param name="head"></param>
-        /// <param name="tail"></param>
-        /// <returns></returns>
-        public static RoadPath CreatePath(Intersection head, Intersection tail) {
-            RoadPath rp = new RoadPath(head, tail);
-            rp.BuildPath();
-            return rp;
-        }
-
-        /// <summary>
-        /// Searches for an Intersection near a position, the search radius is
-        /// given by CigenSettings.maxIntersectionMergeRadius, if none are found
-        /// it creates a new Intersection at the position.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <param name="city"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-	    public static Intersection CreateOrMergeIntersection(Vector3 position, City city, string name = "Intersection") {
-            Intersection c = city.CreateOrMergeNear(position);
-            c.name = name;
-            return c;
+            return;
         }
 
         /// <summary>
@@ -116,6 +105,9 @@ namespace Cigen.Factories {
                     m = new GridConstraint(settings);
                     break;
             }
+
+            Debug.Log(metric);
+
             return m;
         }
     }
