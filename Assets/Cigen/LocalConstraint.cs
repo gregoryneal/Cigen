@@ -162,12 +162,13 @@ namespace Cigen {
         /// <returns>A list of offset vectors, note the Y value of the terrain is not returned. It is always 0.</returns>
         public static List<Vector3Int> BranchLocationsBySegmentMask(Vector3Int pivot, int distance, int resolution = 1) {
             List<Vector3Int> points = new List<Vector3Int>();
-            int v = distance * resolution;
+            int v = distance;// * resolution;
             for (int i = -v; i <= v; i++) {
                 for (int j = -v; j <= v; j++) {
                     if (i == 0 && j == 0) continue;
-                    if (Maths.Math.GreatestCommonDivisor((uint)i, (uint)j) != 1) continue;
-                    points.Add(pivot + new Vector3Int(pivot.x+i, 0, pivot.z+j));
+                    if (Maths.Math.GreatestCommonDivisor((uint)Math.Abs(i), (uint)Math.Abs(j)) != 1) continue;
+
+                    points.Add(new Vector3Int(pivot.x+(i*resolution), 0, pivot.z+(j*resolution)));
                 }
             }
             return points;
@@ -407,7 +408,7 @@ namespace Cigen {
                     }
                 }
                 if (isOverWater) continue;
-                float weight = DistanceCost(startPosition, endpoint)*slopeCost;
+                float weight = DistanceCost(startPosition, endpoint) + slopeCost;
                 //Debug.Log($"Vector: {startPosition} to {endpoint} -> {sampleSum}");
                 preSortedEndpoints.Add(new Tuple<float, Vector3>(weight, endpoint));
             }            
@@ -420,35 +421,38 @@ namespace Cigen {
 
         /// <summary>
         /// The same as the other WeightedEndpointsByTerrainHeight, except this one generates the list of path extensions via segment mask.
-        /// Return the Y value as 0.
+        /// Assumes the Y value for the startPosition is 0, it will also return the Y value of the endpoints as 0.
         /// </summary>
         /// <param name="startPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        public static List<Tuple<float, Vector3Int>> WeightedEndpointsByTerrainHeight(Vector3Int startPosition, int distance) {
+        public static List<Tuple<float, Vector3Int>> WeightedEndpointsByTerrainHeight(Vector3Int startPosition, int distance, int resolution = 4) {
             List<Tuple<float, Vector3Int>> sortedEndpoints = new List<Tuple<float, Vector3Int>>();
-            List<Vector3Int> endpoints = BranchLocationsBySegmentMask(startPosition, distance);
+            List<Vector3Int> endpoints = BranchLocationsBySegmentMask(startPosition, distance, 15);
             float yStart = ImageAnalysis.TerrainHeightAt(startPosition);
+            Vector3 startPos = new Vector3(startPosition.x, yStart, startPosition.z);
             foreach (Vector3Int endpoint in endpoints) {
                 if (ImageAnalysis.PointInBounds(endpoint) == false) continue;
                 float yEndpoint = ImageAnalysis.TerrainHeightAt(endpoint);
+                //Debug.DrawLine(new Vector3(startPosition.x, yStart, startPosition.z), new Vector3(endpoint.x, yEndpoint, endpoint.z), new Color(255, 165, 0));
                 Vector3 e = endpoint + (Vector3.up * yEndpoint);
-                float slopeCost = SlopeCost(startPosition, e);
+                float slopeCost = SlopeCost(startPos, e);
                 if (slopeCost == float.PositiveInfinity) continue;
                 bool isOverWater = false;
                 int maxSamples = 10;
                 for (int i = 0; i <= maxSamples; i++) {
-                    Vector3 samplePoint = startPosition + ((endpoint - startPosition)*i/maxSamples);
+                    Vector3 samplePoint = startPos + ((endpoint - startPos)*i/maxSamples);
                     if (ImageAnalysis.PointOverWater(samplePoint)) {
                         isOverWater = true;
                         break;
                     }
                 }
                 if (isOverWater) continue;
-                float weight = DistanceCost(startPosition, e)*slopeCost;
+                float weight = DistanceCost(startPos, e) + slopeCost;
                 //Debug.Log($"Vector: {startPosition} to {endpoint} -> {sampleSum}");
                 sortedEndpoints.Add(new Tuple<float, Vector3Int>(weight, endpoint));
             }
+            //Debug.Break();
             return sortedEndpoints;
         }
 
@@ -534,10 +538,14 @@ namespace Cigen {
         /// <returns></returns>
         public static float DistanceCost(Vector3 start, Vector3 end, int maxSamples = 1) {
             float totalCost = 0;
-            Vector3 prevEnd = start;
+            float yStart = ImageAnalysis.TerrainHeightAt(start);
+            float yEnd = ImageAnalysis.TerrainHeightAt(end);
+            Vector3 s = new Vector3(start.x, yStart, start.z);            
+            Vector3 e = new Vector3(end.x, yEnd, end.z);
+            Vector3 prevEnd = s;
             for (int i = 1; i <= maxSamples; i++) {
-                Vector3 samplePoint = start + ((end-start)*i/maxSamples);
-                float thSample = start.y;//ImageAnalysis.TerrainHeightAt(samplePoint);
+                Vector3 samplePoint = s + ((e-s)*i/maxSamples);
+                float thSample = ImageAnalysis.TerrainHeightAt(samplePoint);
                 samplePoint = new Vector3(samplePoint.x, thSample, samplePoint.z);
                 totalCost += Vector3.Distance(prevEnd, samplePoint);
                 prevEnd = samplePoint;
@@ -620,13 +628,14 @@ namespace Cigen {
         /// <param name="end"></param>
         /// <param name="maxGradePercentage">The maximum allowed grade of the roadway, expressed as a percentage. 100 * dy/dx.</param>
         /// <returns>The slope cost which is the grade divided by 100. The Delta y/delta x.</returns>
-        public static float SlopeCost(Vector3 start, Vector3 end, float maxGradePercentage = 35f) {
+        public static float SlopeCost(Vector3 start, Vector3 end, float maxGradePercentage = 5f) {
             //calculate the slope of the bridge
             float flatGroundDist = Vector3.Distance(new Vector3(start.x, 0, start.z), new Vector3(end.x, 0, end.z));
-            float heightDiff = end.y - start.y; //+ means going uphill - means going downhill
+            float heightDiff = ImageAnalysis.TerrainHeightAt(end) - ImageAnalysis.TerrainHeightAt(start); //+ means going uphill - means going downhill
             float grade = 100*Math.Abs(heightDiff/flatGroundDist);
             if (grade > maxGradePercentage) return float.PositiveInfinity;
-            return grade*grade/100;
+            //Debug.Log($"GradePerc: {grade}");
+            return grade/100;
         }
     }
 

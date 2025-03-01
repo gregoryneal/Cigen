@@ -121,6 +121,8 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
 
     [Space(10)]
     [Header("Generator settings")]
+    public int segmentMaskValue = 5;
+    public int segmentMaskResolution = 4;
     /// <summary>
     /// Slope is defined as the ratio of the heights between two points, h1/h2.
     /// If the slope is greater than 1 then h1 is taller than h2. If the slope is

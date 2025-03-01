@@ -8,6 +8,7 @@ using System;
 using UnityEngine.UIElements;
 using System.Collections;
 using JetBrains.Annotations;
+using System.ComponentModel;
 
 namespace Cigen.Maths
 {
@@ -395,8 +396,15 @@ namespace Cigen.Maths
         private Vector3Int startPosition;
         private float idealSegmentLength;
         private bool shouldKeepGraphing = true;
+        private int segmentMaskValue;
+        private int segmentMaskResolution;
         public bool isSolved { get; private set; }
         public List<Node> solution = new List<Node>();
+
+        public PathfinderV1() {
+            this.segmentMaskValue = CitySettings.instance.segmentMaskValue;
+            this.segmentMaskResolution = CitySettings.instance.segmentMaskResolution;
+        }
 
         public void Reset() {
             this.isSolved = false;
@@ -427,12 +435,16 @@ namespace Cigen.Maths
                 //draw the segments again
                 if (t > maxT) {
                     foreach (KeyValuePair<Vector3Int, Cost> kvp in closedList1) {
-                        float h = 1f*(kvp.Key.x+kvp.Key.y+kvp.Key.z)/(3*CitySettings.instance.terrainHeightMap.width);
-                        Debug.DrawLine(kvp.Key, kvp.Value.parentPosition, Color.HSVToRGB(h, 0.8f, 0.8f), maxT);
+                        Vector3 v = new Vector3(kvp.Key.x, ImageAnalysis.TerrainHeightAt(kvp.Key), kvp.Key.z);
+                        Vector3 v2 = new Vector3(kvp.Value.parentPosition.x, ImageAnalysis.TerrainHeightAt(kvp.Value.parentPosition), kvp.Value.parentPosition.z);
+                        float h = 1f*(v.x+v.y+v.z)/(3*CitySettings.instance.terrainHeightMap.width);
+                        Debug.DrawLine(v, v2, Color.HSVToRGB(h, 0.8f, 0.8f), maxT);
                     }
                     foreach (KeyValuePair<Vector3Int, Cost> kvp in closedList2) {
-                        float h = 1f*(kvp.Key.x+kvp.Key.y+kvp.Key.z)/(3*CitySettings.instance.terrainHeightMap.width);
-                        Debug.DrawLine(kvp.Key, kvp.Value.parentPosition, Color.HSVToRGB(h, 0.8f, 0.8f), maxT);
+                        Vector3 v = new Vector3(kvp.Key.x, ImageAnalysis.TerrainHeightAt(kvp.Key), kvp.Key.z);
+                        Vector3 v2 = new Vector3(kvp.Value.parentPosition.x, ImageAnalysis.TerrainHeightAt(kvp.Value.parentPosition), kvp.Value.parentPosition.z);
+                        float h = 1f*(v.x+v.y+v.z)/(3*CitySettings.instance.terrainHeightMap.width);
+                        Debug.DrawLine(v, v2, Color.HSVToRGB(h, 0.8f, 0.8f), maxT);
                     }
                     t = 0;
                 }
@@ -442,17 +454,17 @@ namespace Cigen.Maths
                     if (closedList1.ContainsKey(node1.position) == false) {
                         closedList1.Add(node1.position, node1.cost);
                         
-                        if (IsDestination(node1.position)) {
+                        if (IsDestination(node1.worldPosition)) {
                             this.isSolved = true;
                             //get the final distance to the destination
-                            float finalDist = GlobalGoals.DistanceCost(node1.position, this.destination);
+                            float finalDist = GlobalGoals.DistanceCost(node1.worldPosition, this.destination);
                             Cost finalCost = new Cost(node1, node1.cost.distanceTravelled+finalDist, finalDist);
                             Node finalNode = new Node(this.destination, finalCost, node1.length);
                             this.solution.Add(finalNode);
                             closedList1.TryAdd(this.destination, finalCost);
 
                             GameObject g = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                            g.transform.position = node1.position;
+                            g.transform.position = node1.worldPosition;
                             g.transform.localScale = Vector3.one * 15;
                             g.GetComponent<Renderer>().material.color = Color.cyan;
                             yield break;
@@ -470,7 +482,7 @@ namespace Cigen.Maths
                                 Debug.Log("Node1 not found in OpenList2!? Why??");
                             }
                             GameObject g = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                            g.transform.position = node1.position;
+                            g.transform.position = node1.worldPosition;
                             g.transform.localScale = Vector3.one * 15;
                             g.GetComponent<Renderer>().material.color = Color.blue;
                             yield break;
@@ -486,7 +498,7 @@ namespace Cigen.Maths
                         if (IsStartPosition(node2.position)) {
                             this.isSolved = true;
                             //Debug.Log($"Solved! {node.position}");
-                            float finalDist = GlobalGoals.DistanceCost(node2.position, this.startPosition);
+                            float finalDist = GlobalGoals.DistanceCost(node2.worldPosition, this.startPosition);
                             Cost finalCost = new Cost(node2, node2.cost.distanceTravelled+finalDist, finalDist);
                             Node finalNode = new Node(this.startPosition, finalCost, node2.length);
                             this.solution.Add(finalNode);
@@ -494,7 +506,7 @@ namespace Cigen.Maths
                             //closedList.Add(this.destination, finalCost);
                             //Debug.Log($"Found destination node! {node.position}");
                             GameObject g = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                            g.transform.position = node2.position;
+                            g.transform.position = node2.worldPosition;
                             g.transform.localScale = Vector3.one * 15;
                             g.GetComponent<Renderer>().material.color = Color.black;
                             yield break;
@@ -510,7 +522,7 @@ namespace Cigen.Maths
                                 Debug.Log("Node2 not found in OpenList1!? Why??");
                             }
                             GameObject g = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                            g.transform.position = node2.position;
+                            g.transform.position = node2.worldPosition;
                             g.transform.localScale = Vector3.one * 15;
                             g.GetComponent<Renderer>().material.color = Color.white;
                             yield break;
@@ -556,10 +568,10 @@ namespace Cigen.Maths
                     continue;
                 }
                 closedList.Add(node.position, node.cost);
-                if (IsDestination(node.position)) {
+                if (IsDestination(node.worldPosition)) {
                     //Debug.Log($"Solved! {node.position}");
                     this.isSolved = true;
-                    float finalDist = GlobalGoals.DistanceCost(node.position, destination);
+                    float finalDist = GlobalGoals.DistanceCost(node.worldPosition, destination);
                     Cost finalCost = new Cost(node, node.cost.distanceTravelled+finalDist, finalDist);
                     this.solution.Add(new Maths.Node(this.destination, finalCost, node.length));
                     closedList.TryAdd(this.destination, finalCost);
@@ -595,8 +607,8 @@ namespace Cigen.Maths
             //to find a lower cost route if need be. 
             float maxAngle = 180;
             //Debug.Log(node.length);
-            
-            /*List<Tuple<float, Vector3>> endpoints = GlobalGoals.WeightedEndpointsByTerrainHeight(node.position, direction, node.length, maxAngle, 25);
+            /*
+            List<Tuple<float, Vector3>> endpoints = GlobalGoals.WeightedEndpointsByTerrainHeight(node.position, direction, node.length, maxAngle);
             foreach (Tuple<float, Vector3> endpoint in endpoints) {
                 Vector3Int vi = Vector3Int.RoundToInt(endpoint.Item2);
                 //cost of the total distance travelled up to this point
@@ -607,12 +619,14 @@ namespace Cigen.Maths
                 //insert new node into priority queue
                 openList.Insert(newNode);
             }*/
-            List<Tuple<float, Vector3Int>> endpoints = GlobalGoals.WeightedEndpointsByTerrainHeight(node.position, 5);
-            foreach (Tuple<float, Vector3Int> endpoint in endpoints) {
+            List<Tuple<float, Vector3Int>> endpoints2 = GlobalGoals.WeightedEndpointsByTerrainHeight(node.position, this.segmentMaskValue, this.segmentMaskResolution);
+            foreach (Tuple<float, Vector3Int> endpoint in endpoints2) {
+                //The endpoint with the terrain height added
+                Vector3 ePoint = new Vector3(endpoint.Item2.x, ImageAnalysis.TerrainHeightAt(endpoint.Item2.x, endpoint.Item2.z), endpoint.Item2.z);
                 //cost of the total distance travelled up to this point
-                float distanceCost = node.cost.distanceTravelled + Vector3.Distance(node.position, endpoint.Item2) + endpoint.Item1;
+                float distanceCost = node.cost.distanceTravelled + Vector3.Distance(node.position, ePoint) + endpoint.Item1;
                 //int minSegmentsToDestination = Mathf.FloorToInt(Vector3.Distance(endpoint.Item2, destination) / node.length);
-                Cost newCost = new Cost(node, distanceCost, distanceCost+Vector3.Distance(endpoint.Item2, goal));
+                Cost newCost = new Cost(node, distanceCost, distanceCost+Vector3.Distance(ePoint, goal));
                 Node newNode = new Node(endpoint.Item2, newCost, node.length);
                 //insert new node into priority queue
                 openList.Insert(newNode);
@@ -650,8 +664,16 @@ namespace Cigen.Maths
             return Vector3Int.Distance(position, this.destination) < this.idealSegmentLength;
         }
 
+        protected bool IsDestination(Vector3 position) {
+            return Vector3.Distance(position, this.destination) < this.idealSegmentLength;
+        }
+
         protected override bool IsStartPosition(Vector3Int position) {
             return Vector3Int.Distance(position, this.startPosition) < this.idealSegmentLength;
+        }
+
+        protected bool IsStartPosition(Vector3 position) {
+            return Vector3.Distance(position, this.startPosition) < this.idealSegmentLength;
         }
     }    
 
@@ -699,12 +721,16 @@ namespace Cigen.Maths
             public Vector3Int position;
             public Cost cost;
             public float length;
+            //the terrain height at the node
+            float YValue { get { return ImageAnalysis.TerrainHeightAt(this.position); }}
+            public Vector3 worldPosition { get; private set; }
             public bool head = false;
             public Node(Vector3Int position, Cost cost, float length, bool head = false) {
                 this.position = position;
                 this.cost = cost;
                 this.length = length;
                 this.head = head;
+                this.worldPosition = new Vector3(position.x, YValue, position.z);
             }
             public int CompareTo(Node other) { 
                 return cost.CompareTo(other.cost); 

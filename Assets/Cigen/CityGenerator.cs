@@ -355,14 +355,15 @@ namespace Cigen
                 Maths.Node node;
                 while (solutionNodes.TryDequeue(out node)) {
                     try {
-                        Debug.Log($"Node solution: {node.position} | isBridge: {node.cost.isBridge} | isTunnel: {node.cost.isTunnel}");
+                        Debug.Log($"Node solution: {node.worldPosition} | isBridge: {node.cost.isBridge} | isTunnel: {node.cost.isTunnel}");
                         if (node.head) {
                             continue;
                         } else {
                             //create a road segment between the node and its parent, queue the parent   
                             RoadSegment seg = new GameObject().AddComponent<RoadSegment>();
                             Cost cost = node.cost;
-                            seg.Init(node.position, cost.parentPosition, true, cost.isBridge, cost.isTunnel);
+                            Vector3 pp = new Vector3(cost.parentPosition.x, ImageAnalysis.TerrainHeightAt(cost.parentPosition), cost.parentPosition.z);
+                            seg.Init(node.worldPosition, pp, true, cost.isBridge, cost.isTunnel);
                             solutionNodes.Enqueue(cost.parentNode);
                             yield return new WaitForEndOfFrame();
                         }

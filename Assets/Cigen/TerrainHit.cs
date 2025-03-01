@@ -15,10 +15,11 @@ public class TerrainHit : MonoBehaviour {
     Mat material;
     private Vector3 point1 = Vector3.one * -1;
     private Vector3 point2 = Vector3.one * -1; 
-    void Start() {
+    private int resolution;    void Start() {
         terrainCollider = GetComponent<Terrain>().GetComponent<Collider>();
         Texture2D terrainTexture = GetComponent<Terrain>().terrainData.terrainLayers[0].diffuseTexture;
         material = FindFirstObjectByType<CityGenerator>().CVMaterials[terrainTexture];
+        resolution = CitySettings.instance.segmentMaskResolution * CitySettings.instance.segmentMaskValue;
     }
 
     void Update() {
@@ -33,8 +34,11 @@ public class TerrainHit : MonoBehaviour {
                 RaycastHit hit;
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 if (terrainCollider.Raycast(ray, out hit, Mathf.Infinity)) {
-                    CitySettings.instance.cigen.gameObjectPoint1.transform.position = hit.point;
-                    point1 = hit.point;
+                    int newX = Mathf.RoundToInt(hit.point.x / this.resolution) * this.resolution;
+                    int newZ = Mathf.RoundToInt(hit.point.z / this.resolution) * this.resolution;
+                    Vector3 newPoint = new Vector3(newX, hit.point.y, newZ);
+                    CitySettings.instance.cigen.gameObjectPoint1.transform.position = newPoint;
+                    point1 = newPoint;
                 }
             }
             //right click
@@ -42,8 +46,11 @@ public class TerrainHit : MonoBehaviour {
                 RaycastHit hit;
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 if (terrainCollider.Raycast(ray, out hit, Mathf.Infinity)) {
-                    CitySettings.instance.cigen.gameObjectPoint2.transform.position = hit.point;
-                    point2 = hit.point;
+                    int newX = Mathf.RoundToInt(hit.point.x / this.resolution) * this.resolution;
+                    int newZ = Mathf.RoundToInt(hit.point.z / this.resolution) * this.resolution;
+                    Vector3 newPoint = new Vector3(newX, hit.point.y, newZ);
+                    CitySettings.instance.cigen.gameObjectPoint2.transform.position = newPoint;
+                    point2 = newPoint;
                 }
             }
 
