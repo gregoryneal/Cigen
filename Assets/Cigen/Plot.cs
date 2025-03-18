@@ -29,6 +29,7 @@ public class Plot : MonoBehaviour {
     }
 
     public void Build() {
+        /*
         sideDirection = Vector3.Cross(road.Direction, road.transform.up).normalized;
         if (side == PlotRoadSide.PLOTRIGHT) {
             sideDirection *= -1;
@@ -42,6 +43,7 @@ public class Plot : MonoBehaviour {
                             sideDirection * (city.Settings.plotPadding + ((city.Settings.plotWidth + city.Settings.roadDimensions.x) / 2f));
         transform.localScale = new Vector3(city.Settings.plotWidth, Random.value * 0.5f, Mathf.Abs(road.Length - (2*city.Settings.plotPadding)));
         transform.rotation = Quaternion.LookRotation(road.Direction);
+        */
     }
 
     public bool PlaceBuilding(Building building) {
@@ -61,9 +63,10 @@ public class Plot : MonoBehaviour {
     public Vector3 RandomPosition() {
         float rnd1 = UnityEngine.Random.value;
         float rnd2 = UnityEngine.Random.value;
-        Vector3 start = road.parentNode.Position + (road.Direction * city.Settings.plotPadding);
+        /*Vector3 start = road.parentNode.Position + (road.Direction * city.Settings.plotPadding);
         Vector3 end = road.childNode.Position - (road.Direction * city.Settings.plotPadding);
         Vector3 pos = Vector3.Lerp(start, end, rnd1) + (sideDirection * (Mathf.Lerp(0, city.Settings.plotWidth, rnd2) + city.Settings.plotPadding + city.Settings.roadDimensions.x));
-        return pos;
+        return pos;*/
+        return Vector3.zero;
     }
 }

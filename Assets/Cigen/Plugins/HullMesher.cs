@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Cigen;
+using static Cigen.Maths;
 using UnityEngine;
-using Cigen.Maths;
 public struct VertexWithIndex {
     public Vector2 vertex;
     public int index;

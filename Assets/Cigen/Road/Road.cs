@@ -58,9 +58,9 @@ public class Road : MonoBehaviour {
     }
 
     public void BuildMesh() {
-        float roadWidth = City.Settings.roadDimensions.x;
-        float roadHeight = City.Settings.roadDimensions.y;
-        Texture texture = City.Settings.roadTexture;
+        float roadWidth = 1;//City.Settings.roadDimensions.x;
+        float roadHeight = 1;//City.Settings.roadDimensions.y;
+        Texture texture = Texture2D.blackTexture;//City.Settings.roadTexture;
 
         Vector3 from = City.transform.TransformPoint(parentNode.Position);
         Vector3 to = City.transform.TransformPoint(childNode.Position);
@@ -119,6 +119,7 @@ public class Road : MonoBehaviour {
     }
 
 //TODO: rework this so that plots that overlap an existing plot will resize itself to fit
+    /*
     public void ZonePlots() {
         if (Length < City.Settings.minimumRoadLength)
             return;
@@ -131,7 +132,7 @@ public class Road : MonoBehaviour {
         Plot[] plots = CigenFactory.CreatePlots(this);
         this.LeftPlot = plots[0];
         this.RightPlot = plots[1];
-    }
+    }*/
 
     //TODO: Add removal of vertices from intersection dictionary
     public void Remove() {

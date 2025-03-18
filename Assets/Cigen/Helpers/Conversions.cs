@@ -9,25 +9,6 @@ namespace Cigen.Conversions {
 
     public static class Conversion {
 
-        /// <summary>
-        /// Converts all of our lookup textures into a consistently formatted OpenCvSharp Mat. 
-        /// Try not to use textures at all, sent Mat objects between function to prevent conversion every time. 
-        /// </summary>
-        /// <param name="textures">The textures we want to convert.</param>
-        /// <returns>A dictionary that maps input textures to their generated OpenCvSharp materials.</returns>
-        public static Dictionary<Texture2D, Mat> ConvertTexturesToBWMats(List<Texture2D> textures) {
-            Dictionary<Texture2D, Mat> mats = new Dictionary<Texture2D, Mat>();
-            foreach(Texture2D texture in textures) {
-                Mat image = OpenCvSharp.Unity.TextureToMat(texture);
-                //ensures our images are grayscale and uniform.
-                Mat gray = new Mat();
-                Cv2.CvtColor(image, gray, ColorConversionCodes.BGR2GRAY);
-                mats.Add(texture, gray);
-            }
-
-            return mats;
-        }
-
         public static Dictionary<Texture2D, Mat> ConvertTexturesToMats(List<Texture2D> textures, bool convertBW = true) {            
             Dictionary<Texture2D, Mat> mats = new Dictionary<Texture2D, Mat>();
             foreach(Texture2D texture in textures) {
@@ -40,6 +21,7 @@ namespace Cigen.Conversions {
                     Cv2.CvtColor(image, newMat, ColorConversionCodes.BGR2RGB);
                 }
                 mats.Add(texture, newMat);
+
             }
 
             return mats;

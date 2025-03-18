@@ -32,6 +32,7 @@ namespace Cigen {
         /// <param name="populationCenter">The population center to generate a ring road around.</param>
         /// <param name="settings">The city settings.</param>
         /// <returns>An array of intersections that define the vertices of the ring road.</returns>
+        /*
         public static Intersection[] CreateRingRoad(PopulationCenter populationCenter, City city) {
             CitySettings settings = city.Settings;
             //generate an intersection at each bounding point, and a road between each subsequent intersection
@@ -64,7 +65,7 @@ namespace Cigen {
 
 
             return ints.ToArray();
-        }
+        }*/
 
         /// <summary>
         /// Apply settings to proposed ring road intersection position.
@@ -73,6 +74,7 @@ namespace Cigen {
         /// <param name="pc">The population center.</param>
         /// <param name="city">The city.</param>
         /// <returns>A finalized intersection location.</returns>
+        /*
         public static Vector3 RingRoadContourPosition(Vector3 pos, PopulationCenter pc) {
             //our starting point is the projected ellipse point
             float[] compare = new float[]{pc.size.x, pc.size.z};
@@ -80,7 +82,7 @@ namespace Cigen {
             float a = Mathf.Min(compare);
             Debug.Log($"{String.Join(", ", compare)} -> Major and minor axes");
             //subtract worldposition because projected point function assumes the ellipse is centered on 0,0
-            Vector3 startPos = Maths.Math.ProjectedPointOnEllipse(pos-pc.worldPosition, a, b);
+            Vector3 startPos = Maths.ProjectedPointOnEllipse(pos-pc.worldPosition, a, b);
             //return startPos + pc.worldPosition;
             //add back the world position to apply PD functions.
             return ApplyRingRoadSettings(startPos+pc.worldPosition, pc);
@@ -105,7 +107,7 @@ namespace Cigen {
             }
             //lerp towards the new value from the place on the circle
             return Vector3.Lerp(intersectionPosition, samplePos, CitySettings.instance.ringRoadFollowContourAmount);
-            /*
+            
             //binary search, sample positions in the direction of the centroid until we find a point within epsilon of the target
             float targetValue = settings.ringRoadPopulationDensityCutoff;
             float epsilon = 0.01f;
@@ -157,8 +159,8 @@ namespace Cigen {
                 pd = ImageAnalysis.PopulationDensityAt(samplePos.x, samplePos.z, settings);
                 diff = targetValue - pd;
             }
-            */            
-        }
+                        
+        }*/
 
         /// <summary>
         /// Given a PopulationCenter, build a bypass highway system through it. Generate intersection nodes along
@@ -199,7 +201,7 @@ namespace Cigen {
                 (float)avgPixelValue[3],
             };
 
-            return (HighwayType)Cigen.Maths.Math.WeightedRandomSelection(vals);
+            return (HighwayType)Cigen.Maths.WeightedRandomSelection(vals);
         }
     }
 }

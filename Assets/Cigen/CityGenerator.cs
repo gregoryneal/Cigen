@@ -7,12 +7,7 @@ using Cigen.Factories;
 using Cigen.Structs;
 using Cigen.Conversions;
 using Cigen.ImageAnalyzing;
-using System.Data;
-using UnityEditor.Media;
-using System.Linq;
-using Cigen.Maths;
-using System.IO;
-using UnityEditor.Experimental.GraphView;
+using Cigen.Helpers;
 
 namespace Cigen
 {
@@ -40,36 +35,16 @@ namespace Cigen
         #endregion
 
         #region Cigen2 Simplified Method Variables
-        
-        //every iteration dequeue the oldest item and try to add another road to it.
-        private Queue<RoadSegment> highwayEvaluationQueue = new Queue<RoadSegment>();
-        private  Queue<RoadSegment> streetEvaluationQueue = new Queue<RoadSegment>();
-        //road segments that have been passed through the local constraints function and modified to fit.
-        public List<RoadSegment> highwayAcceptedSegments = new List<RoadSegment>();
-        public List<RoadSegment> streetAcceptedSegments = new List<RoadSegment>();
-        private int highwaySegmentLimit = 1000;
-        private int streetSegmentLimit = 0;
+
         private Texture2D contourTex;
         private Vector3 point1;
         private Vector3 point2;
-        private PathfinderV1 pathfinder;
+        //private PathfinderV1 pathfinder;
+        private PathfinderV2 pathfinder;
         private bool pathfinderIsRunning = false;
         private Coroutine pathfinderCoroutine;
-        private Maths.Math.PriorityQueue<Maths.Node> openList1 = new Maths.Math.PriorityQueue<Maths.Node>();
-        private Maths.Math.PriorityQueue<Maths.Node> openList2 = new Maths.Math.PriorityQueue<Maths.Node>();
-        private Dictionary<Vector3Int, Cost> closedList1 = new Dictionary<Vector3Int, Cost>();
-        private Dictionary<Vector3Int, Cost> closedList2 = new Dictionary<Vector3Int, Cost>();
         public GameObject gameObjectPoint1 { get; private set; }
         public GameObject gameObjectPoint2 { get; private set; }
-
-        //private LineRenderer lineRenderer;
-
-        //These are the local constraints that we should apply in this order.
-        private List<LocalConstraint> localConstraints = new List<LocalConstraint>(){
-            //new OverWaterConstraint(),
-            //new NearSegmentConstraint(),
-            //new OutOfBoundsConstraint(),
-        };
 
         #endregion
 
@@ -83,17 +58,18 @@ namespace Cigen
         void Start() {
             startTime = DateTime.Now;
             CitySettings.instance.cigen = this;
-            this.pathfinder = new PathfinderV1();
+            //this.pathfinder = new PathfinderV1();
+            this.pathfinder = new PathfinderV2();
             //lineRenderer = gameObject.AddComponent<LineRenderer>();
             //lineRenderer.positionCount = 2;
             transform.position = Vector3.zero;
 
             this.gameObjectPoint1 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            this.gameObjectPoint1.transform.localScale = Vector3.one * 15;
+            this.gameObjectPoint1.transform.localScale = Vector3.one * CitySettings.GetSegmentMaskResolution(0);
             this.gameObjectPoint1.transform.position = this.point1;
             this.gameObjectPoint1.GetComponent<Renderer>().material.color = Color.green;
             this.gameObjectPoint2 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            this.gameObjectPoint2.transform.localScale = Vector3.one * 15;
+            this.gameObjectPoint2.transform.localScale = this.gameObjectPoint1.transform.localScale;
             this.gameObjectPoint2.transform.position = this.point2;
             this.gameObjectPoint2.GetComponent<Renderer>().material.color = Color.red;
 
@@ -192,13 +168,31 @@ namespace Cigen
         void Update() {
             if (Input.GetKeyDown(KeyCode.KeypadEnter)) {
                 Debug.Log("Starting over!");
+                float y1 = ImageAnalysis.TerrainHeightAt(point1);
+                float y2 = ImageAnalysis.TerrainHeightAt(point2);
+                this.gameObjectPoint1.transform.position = new Vector3(this.gameObjectPoint1.transform.position.x, y1, this.gameObjectPoint1.transform.position.z);
+                this.gameObjectPoint2.transform.position = new Vector3(this.gameObjectPoint2.transform.position.x, y2, this.gameObjectPoint2.transform.position.z);
+                this.point1 = this.gameObjectPoint1.transform.position;
+                this.point2 = this.gameObjectPoint2.transform.position;
                 //start the generator over again
                 _RunPathfinder(this.point1, this.point2);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Backspace)) {
+                StartCoroutine(DestroyRoadSegments());
             }
         }
 
         void OnDisable() {
             StopAllCoroutines();
+        }
+
+        private IEnumerator DestroyRoadSegments() {
+            foreach (RoadSegment r in GameObject.FindObjectsByType<RoadSegment>(FindObjectsInactive.Include, FindObjectsSortMode.None)) {
+                GameObject.Destroy(r.gameObject);
+                yield return new WaitForEndOfFrame();
+            }
+            yield break;
         }
 
         #endregion
@@ -242,6 +236,16 @@ namespace Cigen
                 }
             }
             _terraindata.SetHeights(0, 0, heights);
+            int y = 0;
+            Texture2D layerTex = settings.waterMap;
+            while (this.contourTex == null) {
+                if (y > 10) {
+                    layerTex = settings.waterMap;
+                    break;
+                }
+                y++;
+                yield return new WaitForSeconds(1);
+            }
             TerrainLayer layer = new TerrainLayer();
             //layer2 contains the population density map to overlay onto the terrain for visual reference
             TerrainLayer layer2 = new TerrainLayer();
@@ -254,9 +258,9 @@ namespace Cigen
             layer2.tileSize = layer.tileSize;
             layer3.diffuseTexture = settings.waterMap;
             layer3.tileSize = layer.tileSize;
-            layer4.diffuseTexture = this.contourTex;
+            layer4.diffuseTexture = layerTex;
             layer4.tileSize = layer.tileSize;
-            _terraindata.terrainLayers = new TerrainLayer[]{layer2};
+            _terraindata.terrainLayers = new TerrainLayer[]{layer4};
 
             _terraindata.baseMapResolution = 4098;
         
@@ -266,7 +270,7 @@ namespace Cigen
             
             //attach a TerrainHit script object to test the pixel value at the clicked coordinates for visual reference
             //attach different textures to the terrain above to check that the values match where you click the terrain at.
-            TerrainHit th = terrain.AddComponent<TerrainHit>();
+            /*TerrainHit th = */terrain.AddComponent<TerrainHit>();
             
             //shift it down so we can see our road generator a little easier
             //terrain.transform.position = terrain.transform.position - (UnityEngine.Vector3.up * 4);
@@ -346,24 +350,26 @@ namespace Cigen
             while (!this.pathfinder.isSolved) {
                 //Debug.Log($"Searched {closedList.Count} out of {openList.Count} left");
                 //yield return this.pathfinder.Graph(this.point1, this.point2, this.openList1, this.closedList1, CitySettings.instance.highwayIdealSegmentLength);
-                yield return this.pathfinder.GraphBothEnds(this.point1, this.point2, this.openList1, this.openList2, this.closedList1, this.closedList2, CitySettings.instance.highwayIdealSegmentLength);
+                //yield return this.pathfinder.GraphBothEnds(this.point1, this.point2, this.openList1, this.openList2, this.closedList1, this.closedList2, CitySettings.instance.highwayIdealSegmentLength);
+                yield return this.pathfinder.GraphBothEnds(this.point1, this.point2);
             }
             if (this.pathfinder.isSolved) {
                 //generate a segment for each node
                 //we start generating from the final node so check if our current node is at the start before terminating
-                Queue<Maths.Node> solutionNodes = new Queue<Maths.Node>(this.pathfinder.solution);
-                Maths.Node node;
-                while (solutionNodes.TryDequeue(out node)) {
+                Queue<Node> solutionNodes = new Queue<Node>(this.pathfinder.solution);
+                Color roadColor = UnityEngine.Random.ColorHSV(0, 1, 0.9f, 1, 0.9f, 1);
+                while (solutionNodes.TryDequeue(out Node node)) {
                     try {
-                        Debug.Log($"Node solution: {node.worldPosition} | isBridge: {node.cost.isBridge} | isTunnel: {node.cost.isTunnel}");
+                        //Debug.Log($"Node solution: {node.worldPosition} | isBridge: {node.cost.isBridge} | isTunnel: {node.cost.isTunnel}");
                         if (node.head) {
                             continue;
                         } else {
                             //create a road segment between the node and its parent, queue the parent   
                             RoadSegment seg = new GameObject().AddComponent<RoadSegment>();
+                            seg.debugColor = roadColor;
                             Cost cost = node.cost;
-                            Vector3 pp = new Vector3(cost.parentPosition.x, ImageAnalysis.TerrainHeightAt(cost.parentPosition), cost.parentPosition.z);
-                            seg.Init(node.worldPosition, pp, true, cost.isBridge, cost.isTunnel);
+                            // pp = new Vector3(cost.parentPosition.x, ImageAnalysis.TerrainHeightAt(cost.parentPosition), cost.parentPosition.z);
+                            seg.Init(node.worldPosition, cost.parentNode.worldPosition, true, cost.isBridge, cost.isTunnel);
                             solutionNodes.Enqueue(cost.parentNode);
                             yield return new WaitForEndOfFrame();
                         }
@@ -381,13 +387,8 @@ namespace Cigen
                 this.pathfinder.Reset();
                 this.point1 = point1;
                 this.point2 = point2;
-                this.openList1.Clear();
-                this.closedList1.Clear();
-                this.openList2.Clear();
-                this.closedList2.Clear();
                 this.gameObjectPoint1.transform.position = point1;
                 this.gameObjectPoint2.transform.position = point2;
-
                 this.pathfinderCoroutine = StartCoroutine(RunPathfinder());
             } else {
                 StopCoroutine(this.pathfinderCoroutine);
@@ -395,173 +396,6 @@ namespace Cigen
                 this.pathfinderIsRunning = false;
                 _RunPathfinder(point1, point2);
             }
-        }
-
-        void ProcessQueues() {
-            PopulationCenter pc1 = city.PopulationCenters[UnityEngine.Random.Range(0, city.PopulationCenters.Length)];                
-            PopulationCenter pc2 = city.PopulationCenters[UnityEngine.Random.Range(0, city.PopulationCenters.Length)];
-            while (pc1 == pc2 || pc1.connectedPCs.Contains(pc2)) {
-                pc2 = city.PopulationCenters[UnityEngine.Random.Range(0, city.PopulationCenters.Length)];
-            }
-            //lets choose two positions within their bounds
-            if (ImageAnalysis.RandomPointWithinPopulationCenter(out this.point1, pc1)) {
-                if (ImageAnalysis.RandomPointWithinPopulationCenter(out this.point2, pc2)) {
-                    //solve the path
-                    _RunPathfinder(this.point1, this.point2);
-                } else {
-                    Debug.Log("Couldn't find an appropriate location within the second population center!");
-                }
-            } else {
-                Debug.Log("Couldn't find an appropriate location within the first population center!");
-            }
-            /*
-            while (streetAcceptedSegments.Count < streetSegmentLimit) {
-                //create new axiom
-                //the initial road segment, use texture maps to find suitable location,
-                //you can even seed multiple starters based on the number of population centers or something.
-                RoadSegment intersection = new GameObject().AddComponent<RoadSegment>();
-                //this will place the intersection at a random valid location on the map
-                intersection.InitAxiom(city, false);
-                //draw axiom segment
-                //lineRenderer.SetPosition(0, intersection.StartPosition);
-                //lineRenderer.SetPosition(1, intersection.EndPosition);
-                streetEvaluationQueue.Enqueue(intersection);
-
-                yield return ProcessStreetQueue();
-            }*/
-        }
-
-        IEnumerator ProcessHighwayQueue() {
-            //int i = 0;
-            while (highwayAcceptedSegments.Count < highwaySegmentLimit && highwayEvaluationQueue.Count > 0) {
-                RoadSegment currentSegment = highwayEvaluationQueue.Dequeue();
-                //always accept the first intersection because we will generate it on legal ground
-                //we can rely on short circuiting to prevent calling LocalConstraints on the first intersection.
-                bool accepted = LocalConstraints(currentSegment);
-                if (accepted) {
-                    highwayAcceptedSegments.Add(currentSegment);
-                    //we may set StopGrowing on the segment in a local constraint so lets check that here, after we accept it as a segment
-                    if (currentSegment.StopGrowing == false) {
-                        foreach (RoadSegment segment in GeneratePossibleSegments(currentSegment)) {
-                            highwayEvaluationQueue.Enqueue(segment);
-                        }
-                    }
-                    //i++;
-
-                    //render it in the linerenderer
-                    //lineRenderer.positionCount++;
-                    //lineRenderer.SetPosition(lineRenderer.positionCount-1, currentSegment.EndPosition);
-                } else {
-                    GameObject.Destroy(currentSegment.gameObject);
-                }
-                yield return new WaitForSeconds(.02f);
-            }
-            Debug.Log($"Highway queue empty! Number of segments created: {highwayAcceptedSegments.Count}");
-            yield break;
-        }
-/*
-        IEnumerator ProcessStreetQueue() {   
-            int j = 0;         
-            while (j < streetSegmentLimit && streetEvaluationQueue.Count > 0) {
-                RoadSegment currentSegment = streetEvaluationQueue.Dequeue();
-                bool accepted = LocalConstraints(currentSegment);
-                //always accept the first intersection because we will generate it on legal ground
-                if (accepted) {
-                    streetAcceptedSegments.Add(currentSegment);
-                    foreach (RoadSegment segment in GeneratePossibleSegments(currentSegment)) {
-                        streetEvaluationQueue.Enqueue(segment);
-                    }
-                    j++;
-                    //render it in the linerenderer
-                    //lineRenderer.positionCount++;
-                    //lineRenderer.SetPosition(lineRenderer.positionCount-1, currentSegment.EndPosition);
-                } else {
-                    GameObject.Destroy(currentSegment.gameObject);
-                }
-                yield return new WaitForEndOfFrame();
-            }
-            Debug.Log($"Street Queue empty! Number of segments created: {streetAcceptedSegments.Count}");
-            yield break;
-        }*/
-
-        //This is where we branch off and find possible segments, implementing "global goals" as potential branches
-        /// <summary>
-        /// Naivelly branch off segments towards favored positions. 
-        /// </summary>
-        /// <param name="segment"></param>
-        /// <returns></returns>
-        public List<RoadSegment> GeneratePossibleSegments(RoadSegment segment) {
-            List<RoadSegment> newSegments = new List<RoadSegment>();
-            Vector3 direction = (segment.EndPosition - segment.StartPosition).normalized;
-            RoadSegment potentialSegment1;
-            RoadSegment potentialSegment2;
-            return new List<RoadSegment>();
-
-            //if the segment has a goal
-            /*
-            if (segment.Goal.from != Vector3.zero) {
-                if (segment.IsAxiom) {
-                    List<Vector3> branchEndpoints;
-                    //create a new segment in that direction and add it to the list
-                    RoadSegment newSegment = new GameObject().AddComponent<RoadSegment>();
-                    float lowWeightDistanceScale = 5f;
-                    float distance = segment.IdealSegmentLength;
-                    //check if we are outside a population zone at the endposition
-                    if (ImageAnalysis.PopulationDensityAt(segment.EndPosition) < CitySettings.instance.populationDensityCutoff) {
-                        //branch out from the endposition to find new population centers
-                        branchEndpoints = GlobalGoals.BranchLocationsFromPosition(segment.EndPosition, -direction, lowWeightDistanceScale * distance, segment);
-                    } else {
-                        branchEndpoints = GlobalGoals.BranchLocationsFromPosition(segment.EndPosition, -direction, distance, segment);
-                    }
-
-                    List<Tuple<float, Vector3>> ehh = GlobalGoals.BranchesWeightedByDistAndPopDens(segment.EndPosition, branchEndpoints);
-                    Vector3 bestDirection = (ehh[ehh.Count-1].Item2 - segment.EndPosition).normalized;
-                    //create a new segment in that direction and add it to the list
-                    newSegment.Init(segment.EndPosition, segment.EndPosition + (bestDirection*distance), segment, true);
-                    newSegments.Add(newSegment);
-                }                 
-                /*                    
-                List<Tuple<float,Vector3>> endpoints = GlobalGoals.WeightedEndpointByGoal(segment.EndPosition, segment.GOAL, segment.SegmentDirection, segment.IdealSegmentLength, segment.MaxAngle);
-                if (endpoints.Count > 0) {
-                    //create the segment
-                    RoadSegment newSeg = new GameObject().AddComponent<RoadSegment>();
-                    newSeg.Init(segment.EndPosition, endpoints[0].Item2, segment);
-                    newSegments.Add(newSeg);
-                }*//*
-                bool couldGenerateSegments = GlobalGoals.CreateWeightedSegment(segment.EndPosition, segment.SegmentDirection, segment.IdealSegmentLength, segment, out potentialSegment1);
-                //generate segments outwards from the end position
-                if (couldGenerateSegments) newSegments.Add(potentialSegment1);
-                else GameObject.Destroy(potentialSegment1.gameObject);
-            } else {
-                bool couldGenerateSegments = GlobalGoals.CreateWeightedSegment(segment.EndPosition, direction, segment.IdealSegmentLength, segment, out potentialSegment1);
-                //generate segments outwards from the end position
-                if (couldGenerateSegments) newSegments.Add(potentialSegment1);
-                else GameObject.Destroy(potentialSegment1.gameObject);
-
-                //generate segments outwards from the start position (only really on the axiom segment)
-                if (segment.IsAxiom) {
-                    couldGenerateSegments = GlobalGoals.CreateWeightedSegment(segment.StartPosition, -1 * direction, segment.IdealSegmentLength, segment, out potentialSegment2);
-                    if (couldGenerateSegments) newSegments.Add(potentialSegment2);
-                    else GameObject.Destroy(potentialSegment2.gameObject);
-                }
-            }
-            return newSegments.ToArray();*/
-        }
-
-        /// <summary>
-        /// Check and modify parameters of the segment until it can find an acceptable location to generate the segment
-        /// </summary>
-        /// <param name="segment">The segment to modify.</param>
-        /// <returns>True if the segment could be made to fit, false otherwise.</returns>
-        public bool LocalConstraints(RoadSegment dirtySegment) {
-            foreach (LocalConstraint constraint in this.localConstraints) {
-                if (constraint.ApplyConstraint(ref dirtySegment) == false) {
-                    //we failed to apply the constraint, terminate the segment
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         #endregion

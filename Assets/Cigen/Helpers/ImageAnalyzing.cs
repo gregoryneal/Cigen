@@ -2,11 +2,7 @@ using OpenCvSharp;
 using UnityEngine;
 using Cigen.Structs;
 using Cigen.Conversions;
-using Cigen.Maths;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using NUnit.Framework.Constraints;
 using System;
 
 namespace Cigen.ImageAnalyzing {
@@ -29,7 +25,7 @@ namespace Cigen.ImageAnalyzing {
                 Cv2.Threshold(data, thresh, 100, 255, ThresholdTypes.Binary);
 
                 // find the contours
-                Cv2.FindContours (thresh, out Point[][] contours, out HierarchyIndex[] hierarchy, RetrievalModes.Tree, ContourApproximationModes.ApproxNone, null);
+                Cv2.FindContours (thresh, out Point[][] contours, out HierarchyIndex[] _, RetrievalModes.Tree, ContourApproximationModes.ApproxNone, null);
 
                 Debug.Log($"Found {contours.Length} population centers!");
 
@@ -83,9 +79,9 @@ namespace Cigen.ImageAnalyzing {
                 //create a gameobject and apply the texture to it
                 Texture2D texture = OpenCvSharp.Unity.MatToTexture(colorMat);
                 CitySettings.instance.cigen.SetContourTexture(texture);
-                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                /*GameObject go = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 go.transform.position = new Vector3(0, 0, 0);
-                go.GetComponent<Renderer>().material.mainTexture = texture;
+                go.GetComponent<Renderer>().material.mainTexture = texture;*/
 
                 return populationCenters.ToArray();
         }
@@ -130,13 +126,13 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="x">The world position x value.</param>
         /// <param name="z">The world position z value.</param>
         /// <returns>Whether or not the given position is in a population center.</returns>
-        public static bool PointInAPopulationCenter(Vector3 worldPosition) {
+        /*public static bool PointInAPopulationCenter(Vector3 worldPosition) {
             float pd = ImageAnalysis.PopulationDensityAt(worldPosition.x, worldPosition.z);
             return pd >= CitySettings.instance.populationDensityCutoff;
-        }
+        }*/
 
         public static bool PointInPopulationCenter(Vector3 worldPosition, PopulationCenter pc) {
-            return Maths.Math.IsPointInRectangle(worldPosition, pc.worldPosition, pc.size);
+            return Maths.IsPointInRectangle(worldPosition, pc.worldPosition, pc.size);
         }
 
         /// <summary>
@@ -157,53 +153,6 @@ namespace Cigen.ImageAnalyzing {
                 }
             }
             return closest;
-        }
-
-        public static float GlobalCostFunction(Vector3 previousSegmentEnd, Vector3 segmentStart, Vector3 segmentEnd) {
-            return
-              WaterCostFunction(segmentEnd)
-            + SlopeCostFunction(segmentStart, segmentEnd)
-            + BridgeCostFunction(previousSegmentEnd, segmentStart, segmentEnd)
-            + TunnelCostFunction(previousSegmentEnd, segmentStart, segmentEnd)
-            + NatureCostFunction(segmentStart);
-        }   
-
-        /* //Maybe I don't need to worry about this because curvature is constrained with the maxangle setting.
-        public static float CurvatureCostFunction(Vector3 previousSegmentEnd, Vector3 segmentStart, Vector3 segmentEnd) {
-
-        }*/
-
-        public static float WaterCostFunction(Vector3 segmentEnd) {
-            //if we are over water don't allow the crossing
-            if (PointOverWater(segmentEnd)) return float.PositiveInfinity;
-            return 0;
-        }
-
-        public static float SlopeCostFunction(Vector3 segmentStart, Vector3 segmentEnd) {
-            float y1 = TerrainHeightAt(segmentStart);
-            float y2 = TerrainHeightAt(segmentEnd);
-            float ratio = y1/y2;
-            float maxSlope = CitySettings.instance.maxSlope;
-            if (ratio < maxSlope && ratio > 1/maxSlope) {
-                //we are within tolerance, rank how close we are to 1
-                //quadratic equation centered on x=1 with values approaching 10 as x approaches 1/maxSlope and x=maxSlope
-                //weight = 64(ratio^2) - 128(ratio) + 64
-                return (64 * ratio * ratio) - (128 * ratio) + 64;
-            }
-
-            return float.PositiveInfinity;
-        }
-
-        public static float BridgeCostFunction(Vector3 previousSegmentEnd, Vector3 segmentStart, Vector3 segmentEnd) {
-            return 0;
-        }
-
-        public static float TunnelCostFunction(Vector3 previousSegmentEnd, Vector3 segmentStart, Vector3 segmentEnd) {
-            return 0;
-        }
-
-        public static float NatureCostFunction(Vector3 segmentStart) {
-            return 0;
         }
 
         /// <summary>
@@ -228,7 +177,7 @@ namespace Cigen.ImageAnalyzing {
                     }
                 }
 
-                if (Cigen.Maths.Math.IsPowerOfTwo(texture.height) == false || Cigen.Maths.Math.IsPowerOfTwo(texture.width) == false) {
+                if (Cigen.Maths.IsPowerOfTwo(texture.height) == false || Cigen.Maths.IsPowerOfTwo(texture.width) == false) {
                     return false;
                 }
             }
@@ -295,7 +244,7 @@ namespace Cigen.ImageAnalyzing {
         }
 
         public static bool RandomPointWithinPopulationCenter(out Vector3 randomPosition, PopulationCenter pc) {
-            Vector3 point = Maths.Math.RandomPointInRectangle(pc.worldPosition, pc.size);
+            Vector3 point = Maths.RandomPointInRectangle(pc.worldPosition, pc.size);
             int i = 0;
             int maxTries = 1000;
             while (PointInBounds(point) == false) {
@@ -303,7 +252,7 @@ namespace Cigen.ImageAnalyzing {
                     randomPosition = Vector3.zero;
                     return false;
                 }
-                point = Maths.Math.RandomPointInRectangle(pc.worldPosition, pc.size);
+                point = Maths.RandomPointInRectangle(pc.worldPosition, pc.size);
                 i++;
             }
             randomPosition = new Vector3(point.x, TerrainHeightAt(point.x, point.z), point.z);
@@ -399,13 +348,13 @@ namespace Cigen.ImageAnalyzing {
             }
             return false;
         }
-
+        /*
         public static bool PointOverNature(Vector3 worldPoint) {
             float val = NormalizedPointOnTextureInWorldSpace(worldPoint.x, worldPoint.z, CitySettings.instance.natureMapMat);
             //nature map has a fuzzy boundary so we check if val is greater than the nature map boundary
             if (val > CitySettings.instance.natureMapCutoff) return true;
             return false;
-        }
+        }*/
 
         /// <summary>
         /// Sample the terrain at discrete intervals and if any point is below the terrain height, return true. Return false otherwise.

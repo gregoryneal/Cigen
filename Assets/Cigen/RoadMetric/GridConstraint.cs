@@ -11,7 +11,7 @@ public class GridConstraint : ManhattanConstraint {
     public GridConstraint(CitySettings settings) : base(settings) { }
 
     public Vector3 RoundToScale(Vector3 v) {
-        float scale = settings.minimumRoadLength;
+        float scale = 1;//settings.minimumRoadLength;
         Func<float, float> rts = i => Mathf.Round(i/scale)*scale; //round to scale
         return new Vector3(rts(v.x), rts(v.y), rts(v.z));
     }

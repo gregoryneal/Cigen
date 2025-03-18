@@ -1,22 +1,26 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Cigen.MetricConstraint;
-using Cigen.Factories;
-using Cigen.Structs;
 using OpenCvSharp;
 using UnityEditor;
 using Cigen;
+using System.Linq;
 
 [CreateAssetMenu(fileName = "New City Settings", menuName = "Cigen/CitySettings", order = 1)]
 public class CitySettings : ScriptableSingleton<CitySettings> {
-    [Header("City settings")]
-    public Vector3 cityDimensions = new Vector3(100, 0, 100); //total city bounds
 
     [Space(10)]
+    [Header("Cost settings")]
+    //Control cost values for different road priorities    
+    public float[] sacrifice = new float[]{10f};
+    public float[] maxCurvature = new float[]{10f};
+    public float[] maxSlope = new float[]{10f};
+    public float[] tunnelCost = new float[]{10f};
+    public float[] bridgeCost = new float[]{10f};
+/*
+    [Space(10)]
     [Header("Highway settings")]
-    public float minHighwayBridgeLength = 50f;
-    public float maxHighwayBridgeLength = 500f;
+    //public float minHighwayBridgeLength = 50f;
+    //public float maxHighwayBridgeLength = 500f;
     public float minHighwayTunnelLength = 5f;
     public float maxHighwayTunnelLength = 25f;
     public float highwayIdealSegmentLength = 5;
@@ -46,14 +50,14 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
     /// <summary>
     /// Texture override for the highways, if not set they will be generated somehow.
     /// </summary>
-    public Texture2D highwayTexture;
-    public UnityEngine.Vector2 highwayRoadDimensions = new UnityEngine.Vector2(10, .75f);
+    //public Texture2D highwayTexture;
+    //public UnityEngine.Vector2 highwayRoadDimensions = new UnityEngine.Vector2(10, .75f);
     //rgb texture that allows the highway generation algorithm to choose between different types of highway patterns.
     //R -> Ring road
     //G -> Throughpass (the highway passes through the centroid of the population center)
     //B -> Bypass (the highways avoid the centroid of the population center)
     //the functions work with 4 channels, so we could add another layer to this setup at some point.
-    public Texture2D highwayMap;
+    //public Texture2D highwayMap;
 
     /// <summary>
     /// This setting affects the construction of ring roads placed around a PoplationCenter in conjunction with ringRoadPopulationDensityCutoff.
@@ -74,7 +78,7 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
     public float streetConnectionThreshold = 4;
     public Texture2D roadTexture;
     public UnityEngine.Vector2 roadDimensions = new UnityEngine.Vector2(2, .75f); //dimensions of the lines that are drawn, eventually to be replaced by a mesh
-    public int maxNumberOfRoads = 100;
+    //public int maxNumberOfRoads = 100;
     public float minimumRoadLength = 5f;
     public float maxAngleBetweenStreetBranchSegments = 5;
     public float minAngleBetweenStreetMergeSegments = 30;
@@ -95,19 +99,19 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
     public float plotWidth = 20f; //how deep perpendicular to the road should we build the plot
     public float minPlotWidth = 6f;
     [Range(2, 10)]
-    public int plotResolution = 2;
+    //public int plotResolution = 2;
 
     [Space(10)]
     [Header("Building settings")]
-    public int numBuildings = 10;
+    //public int numBuildings = 10;
     public Vector3 minBuildingSize = new Vector3(1, 3, 1);
     public Vector3 maxBuildingSize = new Vector3(5, 10, 5);
 
     [Space(10)]
     [Header("Metric settings")]
     public MetricSpace metric = MetricSpace.EUCLIDEAN;
-    public int gridSpacing = 10;
-
+    //public int gridSpacing = 10;
+*/
     
     [Space(10)]
     [Header("Terrain settings")]
@@ -121,43 +125,37 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
 
     [Space(10)]
     [Header("Generator settings")]
-    public int segmentMaskValue = 5;
-    public int segmentMaskResolution = 4;
-    /// <summary>
-    /// Slope is defined as the ratio of the heights between two points, h1/h2.
-    /// If the slope is greater than 1 then h1 is taller than h2. If the slope is
-    /// less than 1 but greater than 0 then h2 is taller than h1. We need to constrain
-    /// h1/h2 between the range of (1/maxSlope, maxSlope). If our slope falls outside 
-    /// of this range we deem the road too steep to build. If our slope falls within 
-    /// this range we weight the road based on how close it is to 1, even flat ground.
-    /// </summary>
-    public float maxSlope = 1.4f;
+    public float heuristicCostCoefficient = 1f;
+    public float heuristicDistanceCoefficient = 1f;
+    public bool searchFromBothDirections = true;
+    public bool generateSurfaceRoads = true;
+    public bool generateBridges = true;
+    public bool generateTunnels = true;
+    public int[] tunnelSegmentMaskValue = new int []{10};
+    public int[] tunnelSegmentMaskResolution = new int []{4};
+    public int[] segmentMaskValue = new int[]{5};
+    public int[] segmentMaskResolution = new int[]{4};
+    public bool[] allowBothSidesConnection = new bool[]{true};
 
-    /// <summary>
-    /// How much are we allowed to prune off the end of the segment length in order to try and fit into bounds?
-    /// Given as a percentage of initial length.
-    /// </summary>
-    [Range(0f, 1f)]
-    public float maxPruneLength = 0.5f;
     /// <summary>
     /// This setting defines the boundary of what is considered a populated area. Anything less than this is considered unpopulated.
     /// </summary>
     [Range(0, 1)]
-    public float populationDensityCutoff = 0.1f;
+//    public float populationDensityCutoff = 0.1f;
     public bool roadsFollowTerrain = true;
-    public int maxRoadGenerationSeconds = 15;
-    public int maxIntersectionGenerationSeconds = 15;
-    public int maxPlotGenerationSeconds = 15;
+    //public int maxRoadGenerationSeconds = 15;
+    //public int maxIntersectionGenerationSeconds = 15;
+    //public int maxPlotGenerationSeconds = 15;
     /// <summary>
     /// The value at which the nature map prevents any unflagged nature map roads.
     /// Or the value which controls when the nature map prevents road generation at all, if natureMapPreventsRoadGeneration is true.
     /// </summary>
-    public float natureMapCutoff = 0.12f;
+//    public float natureMapCutoff = 0.12f;
     /// <summary>
     /// Should the nature map prevent road generation, or just flag all the roads generated through it. 
     /// We can always set this false, and then create a seperate nature map road generation queue, just like for highways and streets. 
     /// </summary>
-    public bool natureMapPreventsRoadGeneration = false;
+    //public bool natureMapPreventsRoadGeneration = false;
 
     /// <summary>
     /// this affects how the texture coordinates are transformed into world space.
@@ -173,13 +171,86 @@ public class CitySettings : ScriptableSingleton<CitySettings> {
     public Texture2D waterMap;
     public Mat waterMapMat;
     //denotes natural areas (maybe use custom generation methods nd set a flag on the road itself)
-    public Texture2D natureMap;
+    //public Texture2D natureMap;
     public Mat natureMapMat;
 
     [HideInInspector]
     public CityGenerator cigen;
     [HideInInspector]
     public City city;
+
+    [HideInInspector]
+    public static float GetMaxCurvature(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.maxCurvature.Length) {
+            return 0;
+        }
+
+        return CitySettings.instance.maxCurvature[roadPriority];
+    }
+    [HideInInspector]
+    public static float GetMaxSlope(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.maxSlope.Length) {
+            return 0;
+        }
+
+        return CitySettings.instance.maxSlope[roadPriority];
+    }
+    [HideInInspector]
+    public static float GetTunnelCostScaler(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.tunnelCost.Length) {
+            return 0;
+        }
+
+        return CitySettings.instance.tunnelCost[roadPriority];
+    }
+    [HideInInspector]
+    public static float GetBridgeCostScaler(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.bridgeCost.Length) {
+            return 0;
+        }
+
+        return CitySettings.instance.bridgeCost[roadPriority];
+    }
+
+    [HideInInspector]
+    public static int GetSegmentMaskValue(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.segmentMaskValue.Length) {
+            return 50;
+        }
+        return CitySettings.instance.segmentMaskValue[roadPriority];
+    }
+
+    [HideInInspector]
+    public static int GetSegmentMaskResolution(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.segmentMaskResolution.Length) {
+            return 1;
+        }
+        return CitySettings.instance.segmentMaskResolution[roadPriority];
+    }
+
+    [HideInInspector]
+    public static int GetTunnelSegmentMaskValue(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.tunnelSegmentMaskValue.Length) {
+            return 1;
+        }
+        return CitySettings.instance.tunnelSegmentMaskValue[roadPriority];
+    }
+
+    [HideInInspector]
+    public static int GetTunnelSegmentMaskResolution(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.tunnelSegmentMaskResolution.Length) {
+            return 1;
+        }
+        return CitySettings.instance.tunnelSegmentMaskResolution[roadPriority];
+    }
+
+    [HideInInspector]
+    public static bool GetAllowBothSidesConnection(int roadPriority) {
+        if (roadPriority >= CitySettings.instance.allowBothSidesConnection.Length) {
+            return true;
+        }
+        return CitySettings.instance.allowBothSidesConnection[roadPriority];
+    }
 
     //dd
 }

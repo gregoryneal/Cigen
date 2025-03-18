@@ -27,7 +27,7 @@ public class City : MonoBehaviour {
         transform.position = position;
         this.Settings = settings;
         this.Settings.city = this;
-        metricConstraint = MetricFactory.Process(this.Settings.metric, settings);
+        //metricConstraint = MetricFactory.Process(this.Settings.metric, settings);
 
         if (Settings.populationDensityMapMat == null) {
             Debug.LogError("pop density map is null");
@@ -41,7 +41,7 @@ public class City : MonoBehaviour {
         }*/
         //CreateFirstIntersection();
     }
-
+/*
     /// <summary>
     /// Is there a path between every population center?
     /// Traverse a node with a BFS and once we hit every node return true. 
@@ -113,7 +113,7 @@ public class City : MonoBehaviour {
             return false;
         }
 
-        /*
+        *//*
 
         if (intersections.Where(i => (proposedStart - i.Position <= settings.maxIntersectionMergeRadius || proposedEnd - i.Position <= settings.maxIntersectionMergeRadius)).Count() > 0) {
             return false;
@@ -128,7 +128,7 @@ public class City : MonoBehaviour {
                 Debug.Log("BAD ROAD");
                 return false;
             }
-        }*/
+        }*//*
         return true;
     }
 
@@ -146,9 +146,10 @@ public class City : MonoBehaviour {
         Func<float, float> r = f => UnityEngine.Random.Range(-f, f);
         Vector3 pos = metricConstraint.ProcessPoint(new Vector3(r(Settings.cityDimensions.x), r(Settings.cityDimensions.y), r(Settings.cityDimensions.z)));
         return pos;
-    }
+    }*/
 
     //Need to test every possible road.
+    /*
     private object[] ClosestPointOnRoadNetwork(Vector3 position) {
         object[] ret = new object[2];
         if (roads == null || roads.Count == 0) {
@@ -259,14 +260,14 @@ public class City : MonoBehaviour {
     /// </summary>
     /// <returns></returns>
     public IEnumerator CreateHighways() {
-    /*    List<PopulationCenter> centers = settings.populationCenters;
+    *//*    List<PopulationCenter> centers = settings.populationCenters;
         List<GameObject> places = new List<GameObject>();
         foreach(PopulationCenter pc in centers) {
             GameObject testSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             testSphere.transform.position = pc.position;
             testSphere.transform.localScale = pc.size;
             testSphere.name = "PopulationDensity: " + pc.density.ToString();
-        }*/
+        }*//*
 
         if (Settings == null) {
             Debug.Log("settings is null");
@@ -299,5 +300,5 @@ public class City : MonoBehaviour {
             return 0;
         
         return t.SampleHeight(new Vector3(x, 0, z));
-    }
+    }*/
 }

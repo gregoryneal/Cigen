@@ -19,7 +19,7 @@ public class Building : MonoBehaviour {
             print("this.plot null");
         if (this.plot.city == null)
             print("this.plot.city null");
-        this.obj = MakeABuilding(p.city.Settings.minBuildingSize, p.city.Settings.maxBuildingSize);        
+       // this.obj = MakeABuilding(p.city.Settings.minBuildingSize, p.city.Settings.maxBuildingSize);        
         obj.transform.rotation = p.transform.rotation;
 
         if (!p.PlaceBuilding(this)) {

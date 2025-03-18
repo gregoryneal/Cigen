@@ -1,12 +1,6 @@
-using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Cigen.ImageAnalyzing;
 using OpenCvSharp;
-using Unity.Profiling;
 using UnityEngine;
 
 namespace Cigen.Structs {
@@ -104,7 +98,7 @@ namespace Cigen.Structs {
                 bool anyIntersections = false;
                 foreach (PopulationCenter pc in CitySettings.instance.city.PopulationCenters) {
                     if (pc == pcFrom || pc == pcTo) continue;
-                    if (Maths.Math.LineRectangleIntersection(out _, currGoal.from, currGoal.to, pc.worldPosition, pc.size)) {
+                    if (Maths.LineRectangleIntersection(out _, currGoal.from, currGoal.to, pc.worldPosition, pc.size)) {
                         Vector3 newGoalPoint;
                         if (ImageAnalysis.RandomPointWithinPopulationCenter(out newGoalPoint, pc)) {
                             //Debug.Log("New intersections");

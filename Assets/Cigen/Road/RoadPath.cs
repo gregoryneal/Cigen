@@ -33,6 +33,7 @@ public class RoadPath {
         this.city = city;
     }
 
+    /*
     public void BuildPath() {
         List<Vector3> path = city.metricConstraint.ProcessPathNoEndpoints(startPosition, endPosition);
 
@@ -60,5 +61,5 @@ public class RoadPath {
         get {
             return city.metricConstraint.ProcessPath(startPosition, endPosition);
         }
-    }
+    }*/
 }

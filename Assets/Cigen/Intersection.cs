@@ -31,8 +31,8 @@ public class Intersection : MonoBehaviour {
 
     public void AddVerts(params Vector3[] vertices) {
         foreach (Vector3 v in vertices) {
-            if (!verts.Any(q=>Vector3.Distance(v,q)<=city.Settings.maxIntersectionVerticesMergeRadius))
-                verts.Add(v);
+            /*if (!verts.Any(q=>Vector3.Distance(v,q)<=city.Settings.maxIntersectionVerticesMergeRadius))
+                verts.Add(v);*/
         }
     }
 
@@ -52,11 +52,11 @@ public class Intersection : MonoBehaviour {
     /// </summary>
     /// <param name="newPosition">The position to build the new intersection at.</param>
     /// <returns>The created intersection.</returns>
-    public Intersection Extend(Vector3 newPosition) {
+    /*public Intersection Extend(Vector3 newPosition) {
         Intersection newIntersection = city.CreateOrMergeNear(newPosition);
         city.CreatePath(this, newIntersection);
         return newIntersection;
-    }
+    }*/
 
     public void AddRoad(Road road) {
         if (roads == null)
@@ -86,15 +86,16 @@ public class Intersection : MonoBehaviour {
         
         List<Vector3> v = new List<Vector3>();
         //print("Drawing default square!");
-        float roadWidth = city.Settings.roadDimensions.x;
+        /*float roadWidth = city.Settings.roadDimensions.x;
         v.Add((roadWidth / 2f) * (-transform.forward - transform.right));
         v.Add((roadWidth / 2f) * (transform.forward - transform.right));
         v.Add((roadWidth / 2f) * (transform.forward + transform.right));
         v.Add((roadWidth / 2f) * (-transform.forward + transform.right));
-
+        */
         return v;
     }
 
+/*
     public IEnumerator BuildMesh() {
 
         if (roads.Count < 2) yield break;
@@ -138,7 +139,7 @@ public class Intersection : MonoBehaviour {
 
         //print("Finished building intersection.");
         yield break;
-    }
+    }*/
 
     public void ConnectToIntersection(Intersection child) {
         if (this == child)
@@ -173,6 +174,7 @@ public class Intersection : MonoBehaviour {
 }
 
 public class RoadSegment : MonoBehaviour {
+    public Color debugColor = Color.white;
     //which segments are connected to this start position
     public List<RoadSegment> StartNeighbors = new List<RoadSegment>();
     //which segments are connected to this end position
@@ -188,6 +190,10 @@ public class RoadSegment : MonoBehaviour {
     /// Highway flag, any branches from this will automatically be highways themselves. Only roads can connect to highways using their own heuristics.
     /// </summary>
     public bool IsHighway { get; private set; }
+    /// <summary>
+    /// Index of the road type, lower values mean bigger more important roads. 
+    /// </summary>
+    public int roadTypeIndex = 0;
     /// <summary>
     /// Does this segment go over water?
     /// </summary>
@@ -218,13 +224,13 @@ public class RoadSegment : MonoBehaviour {
         return ret;
     }
 
-    public RoadSegment() {}
-
-    private void InitSettingsValues() {        
-        this.IdealSegmentLength = this.IsHighway? CitySettings.instance.highwayIdealSegmentLength : CitySettings.instance.streetIdealSegmentLength;
-        this.MaxAngle = this.IsHighway? CitySettings.instance.maxAngleBetweenHighwayBranchSegments : CitySettings.instance.maxAngleBetweenStreetBranchSegments;
-        this.MaxBranches = this.IsHighway? CitySettings.instance.maxHighwayBranches : CitySettings.instance.maxStreetBranches;
-        this.MergeDistance = this.IsHighway? CitySettings.instance.highwayConnectionThreshold : CitySettings.instance.streetConnectionThreshold;
+    private void InitSettingsValues() {
+        if (IsAxiom)
+        this.debugColor = UnityEngine.Random.ColorHSV(0, 1, 0.8f, 1, 0.5f, 0.8f);
+        //this.IdealSegmentLength = this.IsHighway? CitySettings.instance.highwayIdealSegmentLength : CitySettings.instance.streetIdealSegmentLength;
+        //this.MaxAngle = this.IsHighway? CitySettings.instance.maxAngleBetweenHighwayBranchSegments : CitySettings.instance.maxAngleBetweenStreetBranchSegments;
+        //this.MaxBranches = this.IsHighway? CitySettings.instance.maxHighwayBranches : CitySettings.instance.maxStreetBranches;
+        //this.MergeDistance = this.IsHighway? CitySettings.instance.highwayConnectionThreshold : CitySettings.instance.streetConnectionThreshold;
     }
 
     /// <summary>
@@ -337,7 +343,7 @@ public class RoadSegment : MonoBehaviour {
     /// <param name="fromStart">Are we trying to merge the start of the input segment? If false we assume we are merging the end of the input segment.</param>
     /// <param name="toStart">Are we merging to the start of the to Segment? If false we assume we are merging to the end of the to segment.</param>
     /// <returns>Whether the merge was succesful. We will have altered the value of the input segment.</returns>
-    public bool Merge(RoadSegment to, bool fromStart, bool toStart) {
+    /*public bool Merge(RoadSegment to, bool fromStart, bool toStart) {
         int maxNeighbors =  this.IsHighway ? CitySettings.instance.maxHighwayNeighbors : CitySettings.instance.maxStreetNeighbors;
         float minAngle = this.IsHighway ? CitySettings.instance.minAngleBetweenHighwayMergeSegments : CitySettings.instance.minAngleBetweenStreetMergeSegments;
         //if we are at capacity just short circuit the logic and return.
@@ -387,7 +393,7 @@ public class RoadSegment : MonoBehaviour {
             }
         }
         return true;
-    }
+    }*/
 
     /// <summary>
     /// Attempt to merge two segments that intersect on the x and z plane
@@ -426,16 +432,20 @@ public class RoadSegment : MonoBehaviour {
         lr.endWidth = .5f;
         if (this.IsBridge) {
             //Debug.Log("I AM A BRIDGE");
+            lr.startWidth = 1f;
+            lr.endWidth = 1f;
             lr.startColor = Color.blue;
             lr.endColor = Color.blue;
         } else if (this.IsTunnel) {
             //Debug.Log("I AM A TUNNEL");
+            lr.startWidth = 1f;
+            lr.endWidth = 1f;
             lr.startColor = Color.yellow;
             lr.endColor = Color.yellow;
         } else {
             //Debug.Log("I AM SIMPLY A ROAD");
-            lr.startColor = Color.red;
-            lr.endColor = Color.red;
+            lr.startColor = this.debugColor;
+            lr.endColor = this.debugColor;
         }
         
         /*GameObject gos = GameObject.CreatePrimitive(PrimitiveType.Sphere);
