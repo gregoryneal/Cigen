@@ -202,7 +202,7 @@ namespace Cigen
         /// <param name="startDir2">The direction of the second line, not normalized.</param>
         /// <param name="ignoreY">Should we ignore the Y value when finding intersections? If set to true then the intersection point will have its Y value set to the sampled terrain height instead of the intersection point.</param>
         /// <returns></returns>
-        public static bool LineLineIntersection(out Vector3 intersection, Vector3 startPoint1, Vector3 startDir1, Vector3 startPoint2, Vector3 startDir2, bool ignoreY = true){
+        public static bool LineLineIntersection(out Vector3 intersection, Vector3 startPoint1, Vector3 startDir1, Vector3 startPoint2, Vector3 startDir2, AnisotropicLeastCostPathSettings settings, bool ignoreY = true){
             if (ignoreY) {
                 startPoint1 = new Vector3(startPoint1.x, 0, startPoint1.z);
                 startDir1 = new Vector3(startDir1.x, 0, startDir1.z);
@@ -222,7 +222,7 @@ namespace Cigen
                 intersection = startPoint1 + (startDir1 * s);
 
                 if (ignoreY) {
-                    intersection = new Vector3(intersection.x, ImageAnalysis.TerrainHeightAt(intersection.x, intersection.z), intersection.z);
+                    intersection = new Vector3(intersection.x, ImageAnalysis.TerrainHeightAt(intersection.x, intersection.z, settings), intersection.z);
                 }
                 //Debug.Log("Line intersection");
                 return true;
@@ -232,7 +232,7 @@ namespace Cigen
             return false;
         }
 
-        public static bool LineRectangleIntersection(out Vector3 intersection, Vector3 lineStart, Vector3 lineEnd, Vector3 boxPosition, Vector3 boxSize) {
+        public static bool LineRectangleIntersection(out Vector3 intersection, Vector3 lineStart, Vector3 lineEnd, Vector3 boxPosition, Vector3 boxSize, AnisotropicLeastCostPathSettings settings) {
             //do 4 line intersections
             //top right
             Vector3 direction = lineEnd - lineStart;
@@ -243,10 +243,10 @@ namespace Cigen
             Vector3 corner3 = boxPosition + new Vector3(boxSize.x/2, 0, -boxSize.z/2);
             //bottom left
             Vector3 corner4 = boxPosition + new Vector3(-boxSize.x/2, 0, -boxSize.z/2);
-            if (LineLineIntersection(out intersection, lineStart, direction, corner1, corner2-corner1) ||
-                LineLineIntersection(out intersection, lineStart, direction, corner1, corner3-corner1) ||
-                LineLineIntersection(out intersection, lineStart, direction, corner3, corner4-corner3) ||
-                LineLineIntersection(out intersection, lineStart, direction, corner4, corner1-corner4)) {
+            if (LineLineIntersection(out intersection, lineStart, direction, corner1, corner2-corner1, settings) ||
+                LineLineIntersection(out intersection, lineStart, direction, corner1, corner3-corner1, settings) ||
+                LineLineIntersection(out intersection, lineStart, direction, corner3, corner4-corner3, settings) ||
+                LineLineIntersection(out intersection, lineStart, direction, corner4, corner1-corner4, settings)) {
                 Debug.Log($"Intersection! {intersection}");
                 return true;
                 

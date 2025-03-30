@@ -294,7 +294,7 @@ public class RoadSegment : MonoBehaviour {
 
         if (this.IsHighway) {
             //see if we can find a random point within a population center
-            if (ImageAnalysis.RandomPointWithinBounds(out Vector3 randomOffset, true)) {
+            if (ImageAnalysis.RandomPointWithinBounds(out Vector3 randomOffset, city.Settings, true)) {
                 transform.SetPositionAndRotation(city.transform.position + randomOffset, city.transform.rotation);
                 transform.parent = city.transform;
 
@@ -302,7 +302,7 @@ public class RoadSegment : MonoBehaviour {
 
                 //use this as start position
                 StartPosition = randomOffset;
-                EndPosition = ImageAnalysis.PointNear(StartPosition, this.IdealSegmentLength);
+                EndPosition = ImageAnalysis.PointNear(StartPosition, this.IdealSegmentLength, city.Settings);
 
                 //Debug.Log($"StartPosition: {StartPosition}, TerrainHeight: {ImageAnalysis.TerrainHeightAt(StartPosition.x, StartPosition.z, this.Settings)}");
                 //Debug.Log($"EndPosition: {EndPosition}, TerrainHeight: {ImageAnalysis.TerrainHeightAt(EndPosition.x, EndPosition.z, this.Settings)}");
@@ -310,12 +310,12 @@ public class RoadSegment : MonoBehaviour {
                 int i = 0;
                 int maxTries = 1000;
                 //look for end position on cirle of radius segmentLength around startposition.
-                while (ImageAnalysis.PointInBounds(EndPosition) == false) {
+                while (ImageAnalysis.PointInBounds(EndPosition, city.Settings) == false) {
                     if (i > maxTries) {
                         Debug.LogError("Bro we couldn't even generate an end point for your start point. That blows, maybe try again or increase the max tries value near this error message if you can find me?");
                         return;
                     }
-                    EndPosition = ImageAnalysis.PointNear(StartPosition, this.IdealSegmentLength);
+                    EndPosition = ImageAnalysis.PointNear(StartPosition, this.IdealSegmentLength, city.Settings);
                 }
             } else {
                 Debug.LogError("Bro we couldn't even generate a single intersection. Try again or check your maps and stuff!");

@@ -8,5 +8,5 @@ using System;
 /// No restriction on intersection placement or road placement
 /// </summary>
 public class EuclideanConstraint : MetricConstraint {
-    public EuclideanConstraint(CitySettings settings) : base(settings) { }
+    public EuclideanConstraint(AnisotropicLeastCostPathSettings settings) : base(settings) { }
 }

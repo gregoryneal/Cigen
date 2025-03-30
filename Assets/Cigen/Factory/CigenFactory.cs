@@ -40,7 +40,7 @@ namespace Cigen.Factories {
         /// <param name="settings"></param>
         /// <param name="name"></param>
         /// <returns></returns>
-        public static City CreateCity(Vector3 position, CitySettings settings, string name = "City") {
+        public static City CreateCity(Vector3 position, AnisotropicLeastCostPathSettings settings, string name = "City") {
             City temp = new GameObject(name).AddComponent<City>();
             temp.Init(position, settings);
             return temp;
@@ -91,7 +91,7 @@ namespace Cigen.Factories {
         /// <param name="metric"></param>
         /// <param name="settings"></param>
         /// <returns></returns>
-        public static MetricConstraint.MetricConstraint Process(MetricSpace metric, CitySettings settings) {
+        public static MetricConstraint.MetricConstraint Process(MetricSpace metric, AnisotropicLeastCostPathSettings settings) {
             MetricConstraint.MetricConstraint m = null;
 
             switch (metric) {

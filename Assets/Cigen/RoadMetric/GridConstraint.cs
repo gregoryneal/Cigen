@@ -8,7 +8,7 @@ using System;
 /// Aligns intersection points to be on grid nodes. Check CitySettings for grid spacing params.
 /// </summary>
 public class GridConstraint : ManhattanConstraint {
-    public GridConstraint(CitySettings settings) : base(settings) { }
+    public GridConstraint(AnisotropicLeastCostPathSettings settings) : base(settings) { }
 
     public Vector3 RoundToScale(Vector3 v) {
         float scale = 1;//settings.minimumRoadLength;

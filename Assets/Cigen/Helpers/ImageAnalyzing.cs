@@ -13,10 +13,10 @@ namespace Cigen.ImageAnalyzing {
         /// </summary>
         /// <param name="inputData">The population density map.</param>
         /// <returns>An array of PopulationCenter objects.</returns>
-        public static PopulationCenter[] FindPopulationCenters() {
+        public static PopulationCenter[] FindPopulationCenters(AnisotropicLeastCostPathSettings settings) {
                 List<PopulationCenter> populationCenters = new List<PopulationCenter>();
 
-                Mat data = CitySettings.instance.populationDensityMapMat;
+                Mat data = settings.populationDensityMapMat;
                 //Mat highwayData = GameObject.FindFirstObjectByType<CityGenerator>().CVMaterials[CitySettings.instance.highwayMap];
 
                 //apply a threshold to this image, if pixel(x,y) > 127 then it is set to 255, otherwise it is set to 0
@@ -40,7 +40,7 @@ namespace Cigen.ImageAnalyzing {
                     //Point[] approx = contour;
                     foreach(Point p in approx) {
                         boundingPoints.Add(p);
-                        worldBoundingPoints.Add(Conversion.TextureToWorldSpace(p));
+                        worldBoundingPoints.Add(Conversion.TextureToWorldSpace(p, settings));
                     }
 
                     //find the center of each contour
@@ -52,7 +52,7 @@ namespace Cigen.ImageAnalyzing {
 
                     //add world position
                     pc.pixelPosition = new OpenCvSharp.Point(centerX, data.Width - 1 - centerY);
-                    pc.worldPosition = Conversion.TextureToWorldSpace(pc.pixelPosition);
+                    pc.worldPosition = Conversion.TextureToWorldSpace(pc.pixelPosition, settings);
                     pc.worldBoundingPoints = worldBoundingPoints.ToArray();
                     pc.pixelBoundingPoints = boundingPoints.ToArray();
                     
@@ -78,7 +78,7 @@ namespace Cigen.ImageAnalyzing {
                 Cv2.DrawContours(colorMat, contours, -1, color, 5);
                 //create a gameobject and apply the texture to it
                 Texture2D texture = OpenCvSharp.Unity.MatToTexture(colorMat);
-                CitySettings.instance.cigen.SetContourTexture(texture);
+                settings.cigen.SetContourTexture(texture);
                 /*GameObject go = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 go.transform.position = new Vector3(0, 0, 0);
                 go.GetComponent<Renderer>().material.mainTexture = texture;*/
@@ -86,19 +86,22 @@ namespace Cigen.ImageAnalyzing {
                 return populationCenters.ToArray();
         }
 
-        public static float TerrainHeightAt(float x, float z) {
-            if (PointInBounds(new Vector3(x,0,z)) == false) return float.PositiveInfinity;
-            if (CitySettings.instance.roadsFollowTerrain) {
-                Point texturePoint = Conversion.WorldToTextureSpace(x, z);
+        public static float TerrainHeightAt(float x, float z, AnisotropicLeastCostPathSettings settings) {
+            if (PointInBounds(new Vector3(x,0,z), settings) == false) return float.PositiveInfinity;
+            if (settings.roadsFollowTerrain) {
+                //Point texturePoint = Conversion.WorldToTextureSpace(x, z, settings);
                 //Debug.Log($"worldToTexture OUTPUT XZ: {(Mathf.Round(x * 100)) / 100.0} -> {texturePoint.X}, { (Mathf.Round(z * 100)) / 100.0} -> {texturePoint.Y}");
-                return NormalizedPointOnMat(texturePoint, CitySettings.instance.terrainHeightMapMat) * CitySettings.instance.terrainMaxHeight;
+                //return (float)NormalizedPointOnMat(texturePoint, settings.terrainHeightMapMat, settings) * settings.terrainMaxHeight;
+                return NormalizedPointOnTextureInWorldSpace(x, z, settings.terrainHeightMap, settings) * settings.terrainMaxHeight;
             }
             return 0;
         }
 
-        public static float TerrainHeightAt(Vector3 worldPosition) {
-            return TerrainHeightAt(worldPosition.x, worldPosition.z);
+        public static float TerrainHeightAt(Vector3 worldPosition, AnisotropicLeastCostPathSettings settings) {
+            return TerrainHeightAt(worldPosition.x, worldPosition.z, settings);
         }
+
+
 
         /// <summary>
         /// Given an x, y position in world space, find the population density at that point.
@@ -106,18 +109,18 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="x">The X value in world space.</param>
         /// <param name="y">The Y value in world space.</param>
         /// <returns>The population density, a value between 0 and 1.</returns>
-        public static float PopulationDensityAt(float x, float z) {
-            Point texturePoint = Conversion.WorldToTextureSpace(x, z);
-            if (PointInBounds(new Vector3(x, 0, z))) {
+        public static float PopulationDensityAt(float x, float z, AnisotropicLeastCostPathSettings settings) {
+            Point texturePoint = Conversion.WorldToTextureSpace(x, z, settings);
+            if (PointInBounds(new Vector3(x, 0, z),settings)) {
                 //read the texture at that point
-                return NormalizedPointOnMat(texturePoint.X, texturePoint.Y, CitySettings.instance.populationDensityMapMat);
+                return (float)NormalizedPointOnMat(texturePoint.X, texturePoint.Y, settings.populationDensityMapMat, settings);
             } else {
                 return 0;
             }
         }
 
-        public static float PopulationDensityAt(Vector3 worldPosition) {
-            return PopulationDensityAt(worldPosition.x, worldPosition.z);
+        public static float PopulationDensityAt(Vector3 worldPosition, AnisotropicLeastCostPathSettings settings) {
+            return PopulationDensityAt(worldPosition.x, worldPosition.z, settings);
         }
 
         /// <summary>
@@ -141,10 +144,10 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="worldPosition"></param>
         /// <param name="isInside">Require the method to only return the closest population center that it is inside of.</param>
         /// <returns></returns>
-        public static PopulationCenter ClosestPopulationCenter(Vector3 worldPosition, bool isInside = false) {
-            PopulationCenter closest = CitySettings.instance.city.PopulationCenters[0];
+        public static PopulationCenter ClosestPopulationCenter(Vector3 worldPosition, AnisotropicLeastCostPathSettings settings, bool isInside = false) {
+            PopulationCenter closest = settings.city.PopulationCenters[0];
             float minDistance = float.MaxValue;
-            foreach (PopulationCenter pc in CitySettings.instance.city.PopulationCenters) {
+            foreach (PopulationCenter pc in settings.city.PopulationCenters) {
                 if (isInside && PointInPopulationCenter(worldPosition, pc) == false) continue;
                 float d = Vector3.Distance(worldPosition, pc.worldPosition);
                 if (d < minDistance) {
@@ -192,31 +195,40 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="col">The column number of the pixel grid.</param>
         /// <param name="texture">The texture to read the value of.</param>
         /// <returns>A value between 0 and 1, 0 being black and 1 being white.</returns>
-        public static float NormalizedPointOnMat(int row, int col, Mat texture) {
+        public static float NormalizedPointOnMat(int row, int col, Mat texture, AnisotropicLeastCostPathSettings settings) {
             try {
                 return (float)texture.At<ushort>(row, col)/ushort.MaxValue;
             } catch (NullReferenceException) {
                 //Debug.Log("ERROR");
                 string texName = "Unknown texture!";
-                foreach (KeyValuePair<Texture2D, Mat> kvp in CitySettings.instance.cigen.CVMaterials) {
+                foreach (KeyValuePair<Texture2D, Mat> kvp in settings.cigen.CVMaterials) {
                     if (kvp.Value == texture) texName = kvp.Key.name;
                 }
                 Debug.LogError($"ERROR ON MAT {texName} at ROW {row} and COL {col}");
                 Debug.Break();
                 return 0;
             }
-
         }
 
-        public static float NormalizedPointOnMat(Point point, Mat texture) {
-            return NormalizedPointOnMat(point.X, point.Y, texture);
+        public static float NormalizedPointOnMat(Point point, Mat texture, AnisotropicLeastCostPathSettings settings) {
+            return NormalizedPointOnMat(point.X, point.Y, texture, settings);
             //return (float)texture.At<ushort>(point.X, point.Y)/ushort.MaxValue;
         }
 
 
-        public static float NormalizedPointOnTextureInWorldSpace(float x, float z, Mat mat) {
-            Point texturePoint = Conversion.WorldToTextureSpace(x, z);
-            return NormalizedPointOnMat(texturePoint, mat);
+        public static float NormalizedPointOnTextureInWorldSpace2(float x, float z, Mat mat, AnisotropicLeastCostPathSettings settings) {
+            Point texturePoint = Conversion.WorldToTextureSpace(x, z, settings);
+            return NormalizedPointOnMat(texturePoint, mat, settings);
+        }
+
+        public static float NormalizedPointOnTextureInWorldSpace(float x, float z, Texture2D texture, AnisotropicLeastCostPathSettings settings) {
+            (int, int) point = Conversion.WorldToTextureSpace2(x, z, settings);
+            return NormalizedPointOnTexture(point.Item1, point.Item2, texture);
+
+        }
+
+        public static float NormalizedPointOnTexture(int row, int col, Texture2D texture) {
+            return texture.GetPixel(row, col).grayscale;
         }
 
         /// <summary>
@@ -243,11 +255,11 @@ namespace Cigen.ImageAnalyzing {
             return Cv2.Mean(croppedImage);
         }
 
-        public static bool RandomPointWithinPopulationCenter(out Vector3 randomPosition, PopulationCenter pc) {
+        public static bool RandomPointWithinPopulationCenter(out Vector3 randomPosition, PopulationCenter pc, AnisotropicLeastCostPathSettings settings) {
             Vector3 point = Maths.RandomPointInRectangle(pc.worldPosition, pc.size);
             int i = 0;
             int maxTries = 1000;
-            while (PointInBounds(point) == false) {
+            while (PointInBounds(point, settings) == false) {
                 if (i > maxTries) {
                     randomPosition = Vector3.zero;
                     return false;
@@ -255,7 +267,7 @@ namespace Cigen.ImageAnalyzing {
                 point = Maths.RandomPointInRectangle(pc.worldPosition, pc.size);
                 i++;
             }
-            randomPosition = new Vector3(point.x, TerrainHeightAt(point.x, point.z), point.z);
+            randomPosition = new Vector3(point.x, TerrainHeightAt(point.x, point.z, settings), point.z);
             return true;
         }
 
@@ -265,12 +277,12 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="withinPopualtionCenter">Should the point also be within a population center?</param>
         /// <param name="randomPosition">The out vector3 to store the point in.</param>
         /// <returns>A random point within bounds, given in world coordinates.</returns>
-        public static bool RandomPointWithinBounds(out Vector3 randomPosition, bool withinPopulationCenter = false) {
+        public static bool RandomPointWithinBounds(out Vector3 randomPosition, AnisotropicLeastCostPathSettings settings, bool withinPopulationCenter = false) {
             //analyze water, and nature maps (and optionally population density maps) to find a single location within bounds
             if (withinPopulationCenter) {
-                PopulationCenter[] pcs = FindPopulationCenters();
+                PopulationCenter[] pcs = FindPopulationCenters(settings);
                 PopulationCenter pc = pcs[UnityEngine.Random.Range(0, pcs.Length)];
-                if (RandomPointWithinPopulationCenter(out randomPosition, pc)) {
+                if (RandomPointWithinPopulationCenter(out randomPosition, pc, settings)) {
                     return true;
                 }
                 randomPosition = Vector3.zero;
@@ -279,16 +291,16 @@ namespace Cigen.ImageAnalyzing {
                 //just pick a random point on the map and sample it
                 int i = 0; 
                 int maxTries = 10000;
-                Vector3 worldPos = new Vector3(UnityEngine.Random.Range(0, CitySettings.instance.populationDensityMap.width), 0, UnityEngine.Random.Range(0, CitySettings.instance.populationDensityMap.height));
-                while (PointInBounds(worldPos) == false) {
+                Vector3 worldPos = new Vector3(UnityEngine.Random.Range(0, settings.populationDensityMap.width), 0, UnityEngine.Random.Range(0, settings.populationDensityMap.height));
+                while (PointInBounds(worldPos, settings) == false) {
                     if (i >= maxTries) {
                         randomPosition = Vector3.zero;
                         return false;
                     }
-                    worldPos = new Vector3(UnityEngine.Random.Range(0, CitySettings.instance.populationDensityMap.width), 0, UnityEngine.Random.Range(0, CitySettings.instance.populationDensityMap.height));
+                    worldPos = new Vector3(UnityEngine.Random.Range(0, settings.populationDensityMap.width), 0, UnityEngine.Random.Range(0, settings.populationDensityMap.height));
                     i++;
                 }
-                randomPosition = new Vector3(worldPos.x, TerrainHeightAt(worldPos.x, worldPos.z), worldPos.z);
+                randomPosition = new Vector3(worldPos.x, TerrainHeightAt(worldPos.x, worldPos.z, settings), worldPos.z);
                 return true;                
             }
         }
@@ -310,11 +322,11 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="point">Point to search from</param>
         /// <param name="distance">Distance to search from point</param>
         /// <returns></returns>
-        public static Vector3 PointNear(Vector3 point, float distance) {
+        public static Vector3 PointNear(Vector3 point, float distance, AnisotropicLeastCostPathSettings settings) {
             //get a random point on the circle of radius distance around our point.
             Vector2 uc = new Vector2(point.x, point.z) + (UnityEngine.Random.insideUnitCircle.normalized * distance);
             //convert it to a vector3 with terrain height on the y axis.
-            Vector3 rdmPos = new Vector3(uc.x, TerrainHeightAt(uc.x, uc.y), uc.y);
+            Vector3 rdmPos = new Vector3(uc.x, TerrainHeightAt(uc.x, uc.y,settings), uc.y);
             return rdmPos;
         }
 
@@ -323,9 +335,9 @@ namespace Cigen.ImageAnalyzing {
         /// </summary>
         /// <param name="worldPoint"></param>
         /// <returns></returns>
-        public static bool PointInBounds(Vector3 worldPoint) {
-            OpenCvSharp.Point texCoords = Conversion.WorldToTextureSpace(worldPoint.x, worldPoint.z);
-            int width = CitySettings.instance.terrainHeightMap.width;
+        public static bool PointInBounds(Vector3 worldPoint, AnisotropicLeastCostPathSettings settings) {
+            OpenCvSharp.Point texCoords = Conversion.WorldToTextureSpace(worldPoint.x, worldPoint.z, settings);
+            int width = settings.terrainHeightMap.width;
             if (texCoords.X < 0 || texCoords.X > width || texCoords.Y < 0 || texCoords.Y > width) {
                 //Debug.Log($"OUTOF BOUNDS COORDS: world: {worldPoint.x}, {worldPoint.z} -> texture: {texCoords.X}, {texCoords.Y}" );
                 //Debug.Break();
@@ -336,10 +348,10 @@ namespace Cigen.ImageAnalyzing {
             return true;
         }
 
-        public static bool PointOverWater(Vector3 worldPoint) {
-            if (PointInBounds(worldPoint)) {
+        public static bool PointOverWater(Vector3 worldPoint, AnisotropicLeastCostPathSettings settings) {
+            if (PointInBounds(worldPoint, settings)) {
                 float epsilon = .05f;
-                float val = NormalizedPointOnTextureInWorldSpace(worldPoint.x, worldPoint.z, CitySettings.instance.waterMapMat);
+                float val = (float)NormalizedPointOnTextureInWorldSpace2(worldPoint.x, worldPoint.z, settings.waterMapMat, settings);
                 //water map is a hard line so we check if the value is close enough to 1
                 if (1 - val < epsilon) {
                     //we are in water
@@ -362,12 +374,12 @@ namespace Cigen.ImageAnalyzing {
         /// <param name="start">The start position in world space.</param>
         /// <param name="end">The end position in world space.</param>
         /// <returns>Is the line connecting the two vectors in world space clipping the terrain?</returns>
-        public static bool IsClippingTerrain(Vector3 start, Vector3 end) {
+        public static bool IsClippingTerrain(Vector3 start, Vector3 end, AnisotropicLeastCostPathSettings settings) {
             float forgiveness = 1f; //how forgiving are we? ideally this might be the thickness of the road mesh or something close to but less than it.
             int numSamples = 10;
             for (int i = 0; i <= numSamples; i++) {
                 Vector3 testPosition = start + ((end - start)*(i/numSamples));
-                float terrainHeight = TerrainHeightAt(testPosition.x, testPosition.z);
+                float terrainHeight = TerrainHeightAt(testPosition.x, testPosition.z, settings);
                 if (testPosition.y < terrainHeight && Mathf.Abs(terrainHeight-testPosition.y) > forgiveness) {
                     Debug.Log($"Clipping terrain at {testPosition} with y value: {terrainHeight}");
                     //Debug.Break();

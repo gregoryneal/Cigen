@@ -41,8 +41,8 @@ namespace Cigen.Conversions {
         /// <param name="texturePoint">The OpenCvSharp Point.</param>
         /// <param name="settings">The city settings.</param>
         /// <returns>A Vector3 pointing to a spot in world space.</returns>
-        public static Vector3 TextureToWorldSpace(Point texturePoint) {
-            return TextureToWorldSpace(PointToVector3(texturePoint));
+        public static Vector3 TextureToWorldSpace(Point texturePoint, AnisotropicLeastCostPathSettings settings) {
+            return TextureToWorldSpace(PointToVector3(texturePoint), settings);
         }
 
         /// <summary>
@@ -51,12 +51,12 @@ namespace Cigen.Conversions {
         /// <param name="texturePoint">The Vector3 pointing to a spot on the texture. The Y value is ignored and read from the heightmap here.</param>
         /// <param name="settings">The city settings.</param>
         /// <returns>A Vector3 pointing to a spot in world space.</returns>
-        public static Vector3 TextureToWorldSpace(Vector3 texturePoint) {
-            Vector3 pos = TextureToWorldSpaceNoY(texturePoint);
+        public static Vector3 TextureToWorldSpace(Vector3 texturePoint, AnisotropicLeastCostPathSettings settings) {
+            Vector3 pos = TextureToWorldSpaceNoY(texturePoint, settings);
             //read pixel value at Point(x,z) in the heightmap texture.
             float y = 0;
-            if (CitySettings.instance.roadsFollowTerrain) {
-                y = CitySettings.instance.terrainMaxHeight * ImageAnalysis.TerrainHeightAt(pos.x, pos.z);
+            if (settings.roadsFollowTerrain) {
+                y = settings.terrainMaxHeight * ImageAnalysis.TerrainHeightAt(pos.x, pos.z, settings);
             }
 
             return new Vector3(pos.x, y, pos.z);
@@ -68,9 +68,9 @@ namespace Cigen.Conversions {
         /// <param name="texturePoint">The Vector3 pointing to a spot on the texture.</param>
         /// <param name="settings">The city settings.</param>
         /// <returns>A Vector3 pointing to a spot in world space.</returns>
-        public static Vector3 TextureToWorldSpaceNoY(Vector3 texturePoint) {
-            float x = texturePoint.x * CitySettings.instance.textureToWorldSpace.x;
-            float z = texturePoint.z * CitySettings.instance.textureToWorldSpace.z;
+        public static Vector3 TextureToWorldSpaceNoY(Vector3 texturePoint, AnisotropicLeastCostPathSettings settings) {
+            float x = texturePoint.x * settings.textureToWorldSpace.x;
+            float z = texturePoint.z * settings.textureToWorldSpace.z;
             return new Vector3(x, 0, z);
         }
 
@@ -80,12 +80,18 @@ namespace Cigen.Conversions {
         /// <param name="x">The world position x value.</param>
         /// <param name="z">The world position z value.</param>
         /// <returns></returns>
-        public static Point WorldToTextureSpace(float x , float z) {
+        public static Point WorldToTextureSpace(float x , float z, AnisotropicLeastCostPathSettings settings) {
             //round to nearest integer of the scale
-            int newx = (int)Math.Round(x / CitySettings.instance.textureToWorldSpace.x);
-            int newz = (int)Math.Round(z / CitySettings.instance.textureToWorldSpace.z);
+            int newx = (int)Math.Round(x / settings.textureToWorldSpace.x);
+            int newz = (int)Math.Round(z / settings.textureToWorldSpace.z);
             //z needs to be mirrored, use texture size in z axis
-            return new Point(CitySettings.instance.terrainHeightMap.height - 1 - newz, newx);
+            return new Point(settings.terrainHeightMap.height - 1 - newz, newx);
+        }
+
+        public static (int, int) WorldToTextureSpace2(float x, float z, AnisotropicLeastCostPathSettings settings) {
+            int newx = (int)Math.Round(x / settings.textureToWorldSpace.x);
+            int newz = (int)Math.Round(z / settings.textureToWorldSpace.z);
+            return (newx, newz);
         }
 
         public static Texture2D MatToTexture(Mat sourceMat) {

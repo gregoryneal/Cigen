@@ -8,7 +8,7 @@ using System;
 /// Allows Intersections to be placed anywhere but roads can only flow horizontal or vertical (with some exceptions)
 /// </summary>
 public class ManhattanConstraint : MetricConstraint {
-    public ManhattanConstraint(CitySettings settings) : base(settings) { }
+    public ManhattanConstraint(AnisotropicLeastCostPathSettings settings) : base(settings) { }
 
     public override float Distance(Vector3 a, Vector3 b)
     {

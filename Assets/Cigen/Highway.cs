@@ -12,9 +12,9 @@ namespace Cigen {
     public class Highway : Road {
 
         
-        public CitySettings settings { get; private set; }
+        public AnisotropicLeastCostPathSettings settings { get; private set; }
 
-        public void Init(Vector3 position, CitySettings settings) {
+        public void Init(Vector3 position, AnisotropicLeastCostPathSettings settings) {
             this.settings = settings;
             transform.position = position;
         }        
@@ -171,7 +171,7 @@ namespace Cigen {
         /// <param name="settings">The city settings.</param>
         /// <returns>An array of intersections that define the vertices of the ring road.</returns>
         public static Intersection[] CreateBypass(PopulationCenter populationCenter, City city) {
-            CitySettings settings = city.Settings;
+            AnisotropicLeastCostPathSettings settings = city.Settings;
             return new Intersection[]{};
         }
 
@@ -183,7 +183,7 @@ namespace Cigen {
         /// <param name="settings">The city settings.</param>
         /// <returns>An array of intersections that define the vertices of the ring road.</returns>
         public static Intersection[] CreateThroughpass(PopulationCenter populationCenter, City city) {
-            CitySettings settings = city.Settings;
+            AnisotropicLeastCostPathSettings settings = city.Settings;
             return new Intersection[]{};
         }
 

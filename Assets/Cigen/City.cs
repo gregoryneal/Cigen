@@ -17,13 +17,13 @@ public class City : MonoBehaviour {
     public List<Plot> plots = new List<Plot>();
     public List<Building> buildings = new List<Building>();
     public Intersection origin;
-    public CitySettings Settings { get; private set; }
+    public AnisotropicLeastCostPathSettings Settings { get; private set; }
     public PopulationCenter[] PopulationCenters { get; private set; }
 
     public MetricConstraint metricConstraint;
 
     //initializing a city sets the metric constraints and then creates the first intersection
-    public void Init(Vector3 position, CitySettings settings) {
+    public void Init(Vector3 position, AnisotropicLeastCostPathSettings settings) {
         transform.position = position;
         this.Settings = settings;
         this.Settings.city = this;
@@ -32,7 +32,7 @@ public class City : MonoBehaviour {
         if (Settings.populationDensityMapMat == null) {
             Debug.LogError("pop density map is null");
         }
-        PopulationCenters = ImageAnalysis.FindPopulationCenters();
+        PopulationCenters = ImageAnalysis.FindPopulationCenters(settings);
         /*Debug.Log($"Found {PopulationCenters.Length} population centers!");
         int i = 0;
         foreach (PopulationCenter pc in PopulationCenters) {

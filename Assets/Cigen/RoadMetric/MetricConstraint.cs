@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Cigen.MetricConstraint { 
     [System.Serializable]
     public abstract class MetricConstraint {
-        public CitySettings settings;
-        public MetricConstraint(CitySettings settings) {
+        public AnisotropicLeastCostPathSettings settings;
+        public MetricConstraint(AnisotropicLeastCostPathSettings settings) {
             this.settings = settings;
         }
         public virtual float Distance(Vector3 start, Vector3 end) {
