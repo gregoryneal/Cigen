@@ -6,7 +6,7 @@ NOTE: ~~This project is pretty dead due to lost interest, I may pick it up in th
 Goal: To provide **realistic** and **configurable** procedural placement of roads for use in Unity games.
 
 ~~To use: Download this repository and open the unity project. Make sure there is at least one empty GameObject with a Cigen component attached. You need to supply a CitySettings asset to the Cigen component. To create one right click in your project window and click Create > Cigen > CitySettings. Then drag it into the Settings inspector variable on the Cigen component. Mess with your settings then press play.~~
-The project is in a developmental state at present, it does not function as in the GIF.
+The project is in a developmental state at present, it may not function exactly as in the video.
 
 If you must play with it, you can load one of two scenes. The "main" scene will allow you to see the new anisotropic least cost path finder, which is working within the project by running it and selecting two points on the generated map with left and right click. You will watch the pathfinder generate a new path between the two points respecting the customizable terrain cost that you can set on the Road Pathfinder Settings object that should be located on one of the scene objects.
 
