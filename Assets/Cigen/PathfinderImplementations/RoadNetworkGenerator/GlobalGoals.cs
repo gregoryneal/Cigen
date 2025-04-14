@@ -3,8 +3,6 @@ using GeneralPathfinder;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-using UnityEditor;
-using UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers;
 
 namespace Cigen {
     /// <summary>

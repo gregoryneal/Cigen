@@ -9,8 +9,8 @@ namespace Clothoid {
     /// to implement different types of clothoid curves using different implementation algorithms and this did it for me. 
     /// </summary>
     /// <typeparam name="T">The specific class derived from ClothoidSegment that holds information about the type of ClothoidSegment for that solution.</typeparam>
-    public abstract class ClothoidSolution<T> : MonoBehaviour where T : ClothoidSegment {
-        protected List<T> segments = new List<T>();
+    public abstract class ClothoidSolution : MonoBehaviour {
+        protected List<ClothoidSegment> segments = new List<ClothoidSegment>();
         public List<Vector3> polyline { get; protected set; }
         public ClothoidCurve clothoidCurve { get; protected set; }
         public virtual int Count { get { return polyline.Count; }}
@@ -19,7 +19,9 @@ namespace Clothoid {
         /// </summary>
         /// <param name="polylineNodes"></param>
         /// <returns></returns>
-        public abstract ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline);
+        public abstract ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline, float allowableError = 0.1f, float endpointWeight = 1);
+
+        public abstract List<Vector3> GetFitSamples(int numSamples);
         
         /// <summary>
         /// Estimate the arc length of a given node on the polyline.
@@ -39,6 +41,16 @@ namespace Clothoid {
                 sum += Vector3.Distance(prev, this.polyline[i]);
                 prev = this.polyline[i];
                 if (this.polyline[i] == node) break;
+            }
+            return sum;
+        }
+
+        protected float EstimateArcLength(int polylineNodeIndex) {
+            float sum = 0;
+            Vector3 prev = this.polyline[0];
+            for (int i = 1; i <= polylineNodeIndex; i++) {
+                sum += Vector3.Distance(prev, this.polyline[i]);
+                prev = this.polyline[i];
             }
             return sum;
         }

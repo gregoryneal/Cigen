@@ -1,28 +1,33 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Clothoid {
 
     /// <summary>
     /// This class converts an input polyline to a ClothoidCurve using the method described by Singh McCrae in the Eurographics Association 2008.
+    /// The generated curve will almost certainly not pass through the input polyline nodes, however they will usually be very close. This solution
+    /// would be good for approximating curves for drawing applications, where exact node values don't necessarily need to be followed.
+    /// 
+    /// Some planned features that didn't make it over from the Singh McCrae paper:
+    /// - G1 (tangent) discontinuities: The LK graph can be used to detect G1 discontinuities as large spikes. We can filter those out and generate
+    ///   curves with sharp corners, given some additional processing.
+    /// - G2 & G3 fitting: The paper describes a method to smooth the LK graph in between segments to generate G2 and G3 segment continuity.
+    /// 
+    /// Some problems that need addressed: 
+    /// - Some curves generate anomalous curvature values, this is visible when viewing LK node graph and its segmented counterpart. No work has been
+    ///   done to address this yet.
     /// </summary>
-    public class ClothoidSolutionSinghMcCrae : ClothoidSolution<ClothoidSegmentSinghMcCrae>
+    public class ClothoidSolutionSinghMcCrae : ClothoidSolution
     {
-
-        /// <summary>
-        /// The ordered translation offsets. Translate the segment i by the amount at segmentTranslation[i] to get the right offset.
-        /// </summary>
-        private List<Vector3> segmentTranslation = new List<Vector3>();
-        /// <summary>
-        /// The ordered y rotation offsets. Rotate the segment i about the y axis by segmentYRotation[i] to get the correct rotation.
-        /// </summary>
-        private List<float> segmentYRotation = new List<float>();
         /// <summary>
         /// The approximated segments from the segmented regression algorithm.
         /// </summary>
-        private List<Vector3> segmentedLKNodes = new List<Vector3>();
+        [HideInInspector]
+        public List<Vector3> segmentedLKNodes = new List<Vector3>();
+
+
+        public List<Vector3> SegmentedLKNodes_scaled { get; private set; }
         /// <summary>
         /// This dictionary maps node positions to their coordinates in LK Space (arc length/curvature space).
         /// The value of the dictionary takes the form of a pair of floats, the first float is the arc length,
@@ -31,30 +36,38 @@ namespace Clothoid {
         /// </summary>
         public Dictionary<Vector3, (float, float)> LKNodeMap { get; private set; }
 
+        /// <summary>
+        /// This is a generated ordered list of node values in the LK graph. x values are the arc length, and z
+        /// values represent the curvature. Y values are not used.
+        /// </summary>
         public List<Vector3> LKNodeMap_orderedList { get {
             List<Vector3> v = new List<Vector3>();
-            for(int i = 0; i < this.clippedPolyline.Count; i++) {
+            for(int i = 0; i < this.polyline.Count; i++) {
                 try {
-                    Vector3 a = new Vector3(LKNodeMap[this.clippedPolyline[i]].Item1, 0, LKNodeMap[this.clippedPolyline[i]].Item2);
+                    Vector3 a = new Vector3(LKNodeMap[this.polyline[i]].Item1, 0, LKNodeMap[this.polyline[i]].Item2);
                     v.Add(a);
                 } catch (Exception) {
+                    Debug.LogError($"Couldn't add node from LKNodeMap with index: {i}");
                     continue;
                 }
             }
             return v;
         }}
 
+        /// <summary>
+        /// Normalized lknode map values, for viewing in the plot, as curvature values tend to be very small.
+        /// </summary>
         public Dictionary<Vector3, (float, float)> LKNodeMap_norm { get; private set; }
 
         /// <summary>
         /// This is an ordered list of Vector3s built upon LKNodeMap_norm, the X value is the arclength and the Z value is the normalized Curvature
         /// useful for visualization since normally the curvature is very small.
         /// </summary>
-        public List<Vector3> LKNodeMap_norm_orderedList { get {
+        public List<Vector3> LKNodeMap_scaled_orderedList { get {
             List<Vector3> v = new List<Vector3>();
-            for(int i = 0; i < this.clippedPolyline.Count; i++) {
+            for(int i = 0; i < this.polyline.Count; i++) {
                 try {
-                    Vector3 a = new Vector3(LKNodeMap_norm[this.clippedPolyline[i]].Item1, 0, LKNodeMap_norm[this.clippedPolyline[i]].Item2);
+                    Vector3 a = new Vector3(LKNodeMap_norm[this.polyline[i]].Item1, 0, LKNodeMap_norm[this.polyline[i]].Item2);
                     v.Add(a);
                 } catch (Exception) {
                     continue;
@@ -63,18 +76,57 @@ namespace Clothoid {
             }
             return v;
         }}
+        
         /// <summary>
-        /// This is a copy of the polyline list without the first or last vectors.
-        /// Useful if we want to iterate over the polyline nodes (in order) that have an associated
-        /// mapping in LK space.
+        /// Max value for curvature normalization.
         /// </summary>
-        public List<Vector3> clippedPolyline { get; private set; }
-        public float maxValue = 10;
+        public float maxNormalizedCurvature = 10;
 
+        /// <summary>
+        /// This list is populated with samples of the curve at arc lengths equivalent to the node arc lengths of the input polyline.
+        /// </summary>
+        public List<Vector3> ArcLengthSamples { get; protected set; }
+        /// <summary>
+        /// arc length samples translated by FitTranslate
+        /// </summary>
+        public List<Vector3> TranslatedArcLengthSamples { get { 
+            List<Vector3> ret = new List<Vector3>();
+            for (int i = 0; i < ArcLengthSamples.Count; i++) {
+                ret.Add(ArcLengthSamples[i] + FitTranslate);
+            }
+            return ret;
+        }}
+        /// <summary>
+        /// Arc length samples minimum index, this is always 0 but I used it this way to be consistent with the paper.
+        /// </summary>
+        private int arcLengthSamplesMinIndex;
+        /// <summary>
+        /// This value should be equal to ArcLengthSamples.Count
+        /// </summary>
+        private int arcLengthSamplesMaxIndex;
+        /// <summary>
+        /// This tells us how to shift the solution curve on the XZ plane to best fit the input polyline.
+        /// Add this value to a sampled point to align the curve with the input (minus a rotation on the y axis)
+        /// </summary>
+        private Vector3 FitTranslate => cmPolyline - cmCurve;
+        /// <summary>
+        /// This tells us how much we need to rotate the solution about the Y axis (in degrees) to fit the input polyline
+        /// </summary>
+        private float fitRotate = 0;
+        /// <summary>
+        /// A rotation transform vector that when applied to a point on the curve in local space, approximates the position of the curve centered on the input polyline, minus a translation.
+        /// </summary>
+        private double[][] rotationMatrix;
+        public Vector3 cmPolyline = Vector3.zero;
+        public Vector3 cmCurve = Vector3.zero;
+        [Range(0f, 0.1f)]
+        public float maxError = 0.01f;
+        
         void Start()
         {
             this.LKNodeMap = new Dictionary<Vector3, (float, float)>();
             this.LKNodeMap_norm = new Dictionary<Vector3, (float, float)>();
+            this.rotationMatrix = new double[][]{new double[]{0}, new double[]{0}, new double[]{0}};
         }
 
         /// <summary>
@@ -84,29 +136,38 @@ namespace Clothoid {
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private (float, float) GetLKPositionAtPolylineIndex(int polylineNodeIndex) {
-            if (polylineNodeIndex <= 0 || polylineNodeIndex >= this.polyline.Count) {
-                throw new ArgumentOutOfRangeException();
-            }            
+            if (polylineNodeIndex == 0) {
+                //approximate what the start curvature should be with a linear approximation from the next two node segment curvatures.
+                if (this.polyline.Count >= 3) {
+                    (float, float) pointa = GetLKPositionAtPolylineIndex(1);
+                    (float, float) pointb = GetLKPositionAtPolylineIndex(2);
+                    float newArcLength = 0;
+                    float newCurvature = ((pointb.Item2 - pointa.Item2) * (newArcLength - pointb.Item1) / (pointb.Item1 - pointa.Item1)) + pointb.Item2;
+                    return (newArcLength, newCurvature);
+                } else {
+                    return (0, GetLKPositionAtPolylineIndex(1).Item2);
+                }
+            }
+            if (polylineNodeIndex == this.polyline.Count-1) {
+                if (this.polyline.Count >= 3) {
+                    (float, float) pointa = GetLKPositionAtPolylineIndex(this.polyline.Count-3);
+                    (float, float) pointb = GetLKPositionAtPolylineIndex(this.polyline.Count-2);
+                    float newArcLength = EstimateArcLength(polylineNodeIndex);
+                    float newCurvature = ((pointb.Item2 - pointa.Item2) * (newArcLength - pointb.Item1) / (pointb.Item1 - pointa.Item1)) + pointb.Item2;
+                    return (newArcLength, newCurvature);
+                } else {
+                    return (EstimateArcLength(polylineNodeIndex), GetLKPositionAtPolylineIndex(this.polyline.Count-2).Item2);
+                }
+            }
             if (LKNodeMap.TryGetValue(this.polyline[polylineNodeIndex], out (float, float) lkNode)) {
                 return lkNode;
             }
-            Vector3 v1 = this.polyline[polylineNodeIndex]-this.polyline[polylineNodeIndex-1];
-            Vector3 v2 = this.polyline[polylineNodeIndex+1]-this.polyline[polylineNodeIndex];
-            float theta = (float)System.Math.Acos((double)Vector3.Dot(v1/v1.magnitude, v2/v2.magnitude));
-            float numerator = 2f * (float)System.Math.Sin(theta/2);
-            float denominator = (float)System.Math.Sqrt(v1.magnitude*v2.magnitude);
-            if (float.IsNaN(numerator) || float.IsInfinity(numerator) || float.IsNaN(denominator) || float.IsInfinity(denominator)) {
-                Debug.Log($"Index: {polylineNodeIndex} | Count: {this.polyline.Count}");
-                Debug.Log($"Numerator: {numerator} | Denominator: {denominator}");
-                Debug.Log($"v1: ({v1.x}, {v1.y}, {v1.z})\t v1Magnitude: {v1.magnitude}");
-                Debug.Log($"v2: ({v2.x}, {v2.y}, {v2.z})\t v2Magnitude: {v2.magnitude}");
-                Debug.Log($"theta: {theta}");
-                Debug.Log($"index: {polylineNodeIndex-1}: {this.polyline[polylineNodeIndex-1]}");
-                Debug.Log($"index: {polylineNodeIndex}: {this.polyline[polylineNodeIndex]}");
-                Debug.Log($"index: {polylineNodeIndex+1}: {this.polyline[polylineNodeIndex+1]}");
-            }
-            (float, float) value = (EstimateArcLength(this.polyline[polylineNodeIndex]), numerator/denominator);
-            return value;
+
+            Vector3 point1 = this.polyline[polylineNodeIndex-1];
+            Vector3 point2 = this.polyline[polylineNodeIndex];
+            Vector3 point3 = this.polyline[polylineNodeIndex+1];
+            //negatize the curvature because in this solution the convention is that positive curvature is a right turn, opposite to most conventions
+            return (EstimateArcLength(this.polyline[polylineNodeIndex]), -Clothoid.Math.MoretonSequinCurvature(point1, point2, point3));
         }
 
         /// <summary>
@@ -246,6 +307,13 @@ namespace Clothoid {
             return segmentedPointSet;
         }
 
+        /// <summary>
+        /// This function uses the walk matrix to figure out where the segments should start and end on the given polyline node. These values are marked in the segment end array.
+        /// </summary>
+        /// <param name="walkMatrix"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="endIndex"></param>
+        /// <param name="segmentEnd"></param>
         private void RecurseThroughMatrix(int[,] walkMatrix, int startIndex, int endIndex, bool[] segmentEnd)
         {
             if (startIndex+1 > endIndex) {
@@ -315,15 +383,11 @@ namespace Clothoid {
         protected override void SetPolyline(List<Vector3> polyline)
         {
             base.SetPolyline(polyline);
-            Vector3[] vecs = new Vector3[polyline.Count-2];
-            //copy the polyline minus the two endpoints to a new array
-            Array.Copy(polyline.ToArray(), 1, vecs, 0, polyline.Count-2);
-            this.clippedPolyline = vecs.ToList();
             this.LKNodeMap.Clear();
             if (polyline.Count < 3) return;
             //PrintDict();
             //Debug.Log("=========================");
-            for (int i = 1; i < polyline.Count-1; i++) {
+            for (int i = 0; i < polyline.Count; i++) {
                 //Debug.Log(this.polyline[i]);
                 (float, float) lkNode = GetLKPositionAtPolylineIndex(i);
                 if (float.IsNaN(lkNode.Item1) || float.IsNaN(lkNode.Item2)) continue;
@@ -339,17 +403,15 @@ namespace Clothoid {
         /// </summary>
         void NormalizeCurvatureSpace() {
             this.LKNodeMap_norm.Clear();
-            float minValue = this.LKNodeMap.Values.Min(val => val.Item2);
-            float maxValue = this.LKNodeMap.Values.Max(val => val.Item2);
-            float diff = maxValue - minValue;
-            float slope = 2*this.maxValue / diff;
             Dictionary<Vector3, (float, float)> normalizedCurvatureMap = new Dictionary<Vector3, (float, float)>();
             foreach (KeyValuePair<Vector3, (float, float)> kvp in this.LKNodeMap) {
-                normalizedCurvatureMap.Add(kvp.Key, (kvp.Value.Item1, ((kvp.Value.Item2-minValue) * slope)-this.maxValue));
+                normalizedCurvatureMap.Add(kvp.Key, (kvp.Value.Item1, kvp.Value.Item2 * maxNormalizedCurvature));
             }
             this.LKNodeMap_norm = normalizedCurvatureMap;
             //PrintPolylineDict(this.LKNodeMap_norm);
         }
+
+
 
         /// <summary>
         /// Print a dictionary defined by a vector and two floats
@@ -363,112 +425,343 @@ namespace Clothoid {
             }
         }
 
-        public override ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline)
+        /// <summary>
+        /// This will build the clothoid curve from the input polyline and an endpoint weight (for alignment).
+        /// Once this has run you can use the solution to calculate points from the clothoid curve by arc length.
+        /// 
+        /// TODO: watch this video and redo the 
+        /// </summary>
+        /// <param name="inputPolyline"></param>
+        /// <param name="endpointWeight"></param>
+        /// <returns></returns>
+        public override ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline, float regressionError = 0.1f, float endpointWeight = 1f)
         {
             SetPolyline(inputPolyline);
-            this.segmentedLKNodes = SegmentedRegression3(this.LKNodeMap_orderedList, 0.02f);
-            SetupTranslationRotationOffsets();
-            for(int i = 0; i < this.LKNodeMap_orderedList.Count; i++) {
-                Debug.Log(this.LKNodeMap_orderedList[i]);
-            } 
-            for(int i = 0; i < segmentedLKNodes.Count; i++) {
-                Debug.Log(segmentedLKNodes[i]);
+            this.segmentedLKNodes = SegmentedRegression3(this.LKNodeMap_orderedList, this.maxError);
+            //normalize the segmented nodes for viewing on a plot
+            SegmentedLKNodes_scaled = new List<Vector3>();
+            for (int i = 0; i < segmentedLKNodes.Count; i++) {
+                SegmentedLKNodes_scaled.Add(new Vector3(segmentedLKNodes[i].x, segmentedLKNodes[i].y, segmentedLKNodes[i].z * maxNormalizedCurvature));
             }
+            /*for (int i = 0; i < this.segmentedLKNodes.Count; i++) {
+                Debug.Log($"Segmented LK Node {i}: {segmentedLKNodes[i]}");
+            }*/
+            //SetupCanonicalSegments(); //build the segmentTranslation and segmentYRotation lists
             this.clothoidCurve = new ClothoidCurve(ClothoidSegment.GenerateSegmentsFromLKGraph(segmentedLKNodes), inputPolyline);
+            SetupArcLengthSamples(); //collect samples on the curve based on the arc lengths of the polyline
+            SetupFitTranslation(endpointWeight);
+            SetupFitRotation3(); //use the previous sampled points to calculate the optimal translation and rotation offset for the curve
+            //SetupFitRotation(endpointWeight);
 
+            //CalculateTangentsAndNormals();
+            /*Debug.Log("====== Segment Offset Results ======");
+            for(int i = 0; i < this.segmentTranslation.Count; i++) {
+                Debug.Log($"trans: {segmentTranslation[i]}");
+                Debug.Log($"rot: {segmentYRotation[i]}");
+            } 
+            Debug.Log("=================================");
+            Debug.Log("====== Curve Fit Results ======");
+            Debug.Log($"trans: {this.fitTranslate}");
+            Debug.Log($"rot: {this.fitRotate}");
+            Debug.Log("=================================");*/
+            //this.clothoidCurve.AddBestFitTranslationRotation(this.cmCurve, this.FitTranslate, this.fitRotate);
+            this.clothoidCurve.AddBestFitTranslationRotation(this.cmCurve, this.cmPolyline, this.rotationMatrix);
             return this.clothoidCurve;
         }
 
         /// <summary>
-        /// Create the translation and rotation vectors and store them for each segment
+        /// Sample a point on a generalized clothoid curve, one made up of line segments, circle segments and clothoid segments.
         /// </summary>
-        private void SetupTranslationRotationOffsets() {
-            segmentTranslation.Clear();
-            segmentYRotation.Clear();
-
-            segmentTranslation.Add(Vector3.zero);
-            segmentYRotation.Add(0);
-
-            for (int i = 1; i < segmentedLKNodes.Count; i++) {
-                Vector3 prevOffset = segmentTranslation[^1];
-                float prevRotation = segmentYRotation[^1];
-                float curveS = segmentedLKNodes[i-1].y;
-                float curveE = segmentedLKNodes[i].y;
-                float curveDiff = curveE - curveS;
-                float eachLength = segmentedLKNodes[i].x - segmentedLKNodes[i-1].x;
-                Vector3 transVec;
-
-                switch (ClothoidSegment.GetLineTypeFromCurvatureDiff(curveS, curveE)) {
-                    case LineType.LINE:
-                        transVec = new Vector3(eachLength, 0, 0);
-                        segmentTranslation.Add(prevOffset + ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, prevRotation));
-                        segmentYRotation.Add(prevRotation);
-                    break;
-                    case LineType.CLOTHOID:                        
-                        float B = Mathf.Sqrt(eachLength/(Mathf.PI * Mathf.Abs(curveDiff)));
-                        float t1 = curveS * B * ClothoidSegment.CURVE_FACTOR;
-                        float t2 = curveE * B * ClothoidSegment.CURVE_FACTOR;
-                        transVec = ClothoidSegment.GetClothoidPiecePoint(t1, t2, t2) * Mathf.PI * B;
-                        float rotAmount = t2 > t1 ? ((t2 * t2) - (t1 * t1)) * 180f / Mathf.PI : ((t1 * t1) - (t2 * t2)) * 180f / Mathf.PI;
-                        segmentTranslation.Add(prevOffset + ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, prevRotation));
-                        segmentYRotation.Add(prevRotation-rotAmount);
-                    break;
-                    case LineType.CIRCLE:
-                        float radius = 2f / (curveS + curveE);
-                        bool negativeCurvature = radius < 0 ? true : false;
+        /// <param name="startArcLength"></param>
+        /// <param name="endArcLength"></param>
+        /// <param name="startCurvature"></param>
+        /// <param name="endCurvature"></param>
+        /// <param name="interpolation"></param>
+        /// <returns></returns>
+        public Vector3 SampleGeneralizedPoint(float startArcLength, float endArcLength, float startCurvature, float endCurvature, float interpolation) {
+            Vector3 transVec;
+            float totalArcLength = endArcLength - startArcLength;
+            float currArcLength = startArcLength + (interpolation * totalArcLength);
+            switch (ClothoidSegment.GetLineTypeFromCurvatureDiff(startCurvature, endCurvature)) {
+                case LineType.CLOTHOID:
+                    Debug.Log("Sampling clothoid");
+                    transVec = ClothoidSegment.SampleClothoidSegment(startArcLength, endArcLength, startCurvature, endCurvature, interpolation);
+                break;
+                case LineType.LINE:
+                    Debug.Log("Sampling line");
+                    transVec = new Vector3(currArcLength - startArcLength, 0, 0);
+                break;
+                default:
+                //LineType.CIRCLE
+                    Debug.Log("Sampling circle");
+                    float radius = 2f / (endCurvature + startCurvature);
+                    bool negativeCurvature = radius < 0;
+                    if (negativeCurvature) {
                         radius = Mathf.Abs(radius);
-                        float circumference = 2 * Mathf.PI * radius;
-                        float anglesweep_rad = (2 * Mathf.PI * eachLength) / circumference;
-                        float rot;
-                        if (negativeCurvature) {
-                            transVec = new Vector3(0, 0, radius);
-                            transVec = ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, anglesweep_rad * 180f / Mathf.PI);
-                            transVec = new Vector3(transVec.x, transVec.y, transVec.z - radius);
-                            rot = -anglesweep_rad * 180f / Mathf.PI;
-                        } else {
-                            transVec = new Vector3(0, 0, -radius);
-                            transVec = ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, -anglesweep_rad * 180f / Mathf.PI);
-                            transVec = new Vector3(transVec.x, transVec.y, transVec.z + radius);
-                            rot = anglesweep_rad * 180f / Mathf.PI;
-                        }
+                    }
 
-                        segmentTranslation.Add(prevOffset + ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, prevRotation));
-                        segmentYRotation.Add(prevRotation - rot);
+                    float circumference = Mathf.PI * 2 * radius;
+                    float anglesweep_rad = totalArcLength * Mathf.PI * 2 / circumference;
 
-                    break;
-                }
+                    if (negativeCurvature) {
+                        //Debug.Log("curvature negative");
+                        transVec = new Vector3(0, 0, radius);
+                        transVec = ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, interpolation * anglesweep_rad * 180f / Mathf.PI);
+                        transVec = new Vector3(transVec.x, transVec.y, transVec.z - radius);
+                    } else {
+                        //Debug.Log("curvature positive");
+                        transVec = new Vector3(0, 0, -radius);
+                        transVec = ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, -interpolation * anglesweep_rad * 180f / Mathf.PI);
+                        transVec = new Vector3(transVec.x, transVec.y, transVec.z + radius);
+                    }
+                break;
             }
 
-        }       
+            return transVec;
+        }
 
         /// <summary>
-        /// This will setup the translation/rotation matrix that aligns each segment with the input polyline.
-        /// This also has a variable input weighting to configure how much the endpoints need to be aligned.
+        /// Get a number of evenly spaced samples along the solution curve.
         /// </summary>
-        protected void SetupFitTransform(float endpointWeight) {
-            //assign weights to all points in the input polyline
-            int arcLengthSampleStart = 0;
-            int arcLengthSampleEnd = polyline.Count;
-            float[] weighting = new float[arcLengthSampleEnd - arcLengthSampleStart - 1];
-            Array.Fill(weighting, 1f);
-            weighting[arcLengthSampleStart] = endpointWeight;
-            weighting[arcLengthSampleEnd-1] = endpointWeight;
-            float totalWeight = weighting.Sum(); //total weight of all pieces for normalization i would imagine.
+        /// <returns></returns>
+        public override List<Vector3> GetFitSamples(int numSamples) {            
+            return clothoidCurve.GetSamples(numSamples);
+        }
+        /// <summary>
+        /// Get a sample of the curve for each node in the input polyline.
+        /// </summary>
+        protected void SetupArcLengthSamples() {
+            this.ArcLengthSamples = new List<Vector3>();
+            this.arcLengthSamplesMinIndex = int.MaxValue;
+            this.arcLengthSamplesMaxIndex = 0;
+            for (int i = 0; i < this.LKNodeMap_orderedList.Count; i++) {
+                Vector3 node = this.LKNodeMap_orderedList[i];
+                ArcLengthSamples.Add(clothoidCurve.SampleCurveFromArcLength(node.x));/*
+                for (int j = 0; j < this.segmentedLKNodes.Count-1; j++) {
+                    Vector3 segmentedNode = this.segmentedLKNodes[j];
+                    Vector3 nextSegmentedNode = this.segmentedLKNodes[j+1];
+                    if (node.x >= segmentedNode.x && node.x <= nextSegmentedNode.x) {
+                        //float curveS = segmentedNode.z;
+                        //float curveE = nextSegmentedNode.z;
+                        float interp = (node.x - segmentedNode.x) / (nextSegmentedNode.x-segmentedNode.x);
+                        Vector3 transVec = SampleGeneralizedPoint(segmentedNode.x, nextSegmentedNode.x, segmentedNode.z, nextSegmentedNode.z, interp);
+                        Vector3 newVec = this.segmentTranslation[j] + ClothoidSegment.RotateAboutAxis(transVec, Vector3.up, this.segmentYRotation[j]);
+                        arcLengthSamples.Add(newVec);
+                        if (i < arcLengthSamplesMinIndex)
+                            arcLengthSamplesMinIndex = i;
+                        if (i > arcLengthSamplesMaxIndex)
+                            arcLengthSamplesMaxIndex = i;
+                        
+                        break;
+                    }
+                }*/
+            }
+            arcLengthSamplesMinIndex = 0;
+            arcLengthSamplesMaxIndex = ArcLengthSamples.Count;
+            /*
+            Debug.Log($"arcLengthSampleStart: {arcLengthSamplesMinIndex}");
+            Debug.Log($"arcLengthSamplesEnd: {arcLengthSamplesMaxIndex}");
+            Debug.Log($"Max i: {this.LKNodeMap_orderedList.Count-1}");
 
-            //find a translation matrix by aligning the centers of mass of the input polyline and the resulting curve.
-            Vector3 cmPolyline = Vector3.zero;
-            Vector3 cmCurve = Vector3.zero;
+            Debug.Log("============== Arc Length Samples ===============");
+            for (int i = 0; i < this.arcLengthSamples.Count; i++) {
+                Debug.Log(this.arcLengthSamples[i]);
+            }
+            Debug.Log("=============================================");*/
+        }
 
-            for (int i = arcLengthSampleStart; i < arcLengthSampleEnd; i++) {
-                cmPolyline += this.polyline[i] * weighting[i-arcLengthSampleStart];
+        /// <summary>
+        /// Uses singular value decomposition to factorize the product of the centered input polyline and the centered curve as a product of a rotation, scaling, and
+        /// another rotation. Since the two curves are very close in size due to the generation algorithm, we only need the rotation portion of the factorization.
+        /// </summary>
+        protected void SetupFitRotation3() {
+            //1. Translate both sets of points so they are centered around the origin (point - cmPolyline)
+            //2. Create a matrix for each set of points. A is the points on the arc length samples and B is the points on the input polyline.
+            //2b. The matrices A and B are organized with row vectors, where each row is a point on the line. here is an example with 3 points
+            // | ax ay az |
+            // | bx by bz |
+            // | cx cy cz |
+            //2c. Find the transpose of A (A') and multiply it with B => A'B = M
+            //3. Find the SVD of M => SVD(M) = USV' where U and V' are orthogonal (real square) matrices and S is a diagonal. V' is the transpose of V.
+            //4. The optimal rotation is given by R = UV'.
+            //5. To rotate a point by this amount we must multiply the *column* vector by the rotation vector P' = RP where P => [x, y, z]^T, we must read the result as a column vector as well.
+
+            //1. & 2.
+
+
+            /*double[][] cip = new double[clippedPolyline.Count][];
+            double[][] ccp = new double[clippedPolyline.Count][];*/
+            double[][] cip = new double[polyline.Count][];
+            double[][] ccp = new double[polyline.Count][];
+            for (int i = 0; i < ArcLengthSamples.Count; i++) {
+                //Debug.Log("Accessing " + i);
+                //Vector3 centeredInputPoint = clippedPolyline[i] - this.cmPolyline;
+                Vector3 centeredInputPoint = polyline[i] - this.cmPolyline;
+                Vector3 centeredCurvePoint = ArcLengthSamples[i] - this.cmCurve;
+                cip[i] = new double[] {centeredInputPoint.x, centeredInputPoint.y, centeredInputPoint.z};
+                ccp[i] = new double[] {centeredCurvePoint.x, centeredCurvePoint.y, centeredCurvePoint.z};
             }
 
-            cmPolyline /= totalWeight;
+            //3. 
+            double[][] M = Clothoid.Math.SVDJacobiProgram.MatProduct(Clothoid.Math.SVDJacobiProgram.MatTranspose(ccp), cip);
 
-            for (int i = arcLengthSampleStart; i < arcLengthSampleEnd; i++) {
+            //4. Vh is V transpose.
+            if (Clothoid.Math.SVDJacobiProgram.SVD_Jacobi(M, out double[][] U, out double[][] Vh, out double[] S)) {
+            
+                //5.
+                this.rotationMatrix = Clothoid.Math.SVDJacobiProgram.MatProduct(U, Vh);
+            } else {
+                Debug.LogError("Error: No rotation matrix found for spline");
+            }
+            //Clothoid.Math.SVDJacobiProgram.MatShow(this.rotationMatrix, 2, 4);
+        }
+        
+        /// <summary>
+        /// This is my attempt at copying the rotation solving algorithm from the paper. It was not successful but I leave it here just in case I ever want to work on it again.
+        /// I ended up using singlular value decomposition.
+        /// </summary>
+        protected void SetupFitRotation(float endpointWeight) {
+
+            float[] A_pq = new float[4];
+            Array.Fill(A_pq, 0);
+
+            for (int i = arcLengthSamplesMinIndex; i < arcLengthSamplesMaxIndex; i++) {
+                //difference in the polyline point to the center of mass
+                //Vector3 p_i = clippedPolyline[i] - cmPolyline;
+                Vector3 p_i = polyline[i] - cmPolyline;
+                //diff in the curve point to the center of mass of the curve
+                Vector3 q_i = ArcLengthSamples[i-arcLengthSamplesMinIndex] - cmCurve;
+
+                float weight = i == arcLengthSamplesMinIndex || i == arcLengthSamplesMaxIndex ? endpointWeight : 1f;
+
+                //weighting vector of some sort
+                A_pq[0] += p_i.x * q_i.x * weight;
+                A_pq[1] += p_i.x * q_i.z * weight;
+                A_pq[2] += p_i.z * q_i.x * weight;
+                A_pq[3] += p_i.z * q_i.z * weight;
+            }
+
+            float[] A_pqTA_pq = new float[4];
+            A_pqTA_pq[0] = (A_pq[0] * A_pq[0]) + (A_pq[2] * A_pq[2]);
+            A_pqTA_pq[1] = (A_pq[0] * A_pq[1]) + (A_pq[2] * A_pq[3]);
+            A_pqTA_pq[2] = (A_pq[0] * A_pq[1]) + (A_pq[2] * A_pq[3]);
+            A_pqTA_pq[3] = (A_pq[1] * A_pq[1]) + (A_pq[3] * A_pq[3]);
+
+            float a, b, c, d;
+            a = A_pqTA_pq[0];
+            b = A_pqTA_pq[1];
+            c = A_pqTA_pq[2];
+            d = A_pqTA_pq[3];
+
+            //matrix ranks? column and row numbers I think.
+            float r_1 = ((a + d) / 2f) + Mathf.Sqrt(((a + d) * (a + d) / 4f) + (b * c) - (a * d));
+            float r_2 = ((a + d) / 2f) - Mathf.Sqrt(((a + d) * (a + d) / 4f) + (b * c) - (a * d));
+
+            float[] sqrtA = new float[4];
+            float[] Sinv = new float[4];
+            float[] R = new float[4];
+
+            if (r_1 != 0f && r_2 != 0f) {
+                //if matrix is not rank deficient
+                float m;
+                float p;
                 
+                if (r_1 != r_2) {
+                    /*m = (Mathf.Sqrt(r_2) - Mathf.Sqrt(r_1)) / (r_2 - r_1);
+                    p = ((r_2 * Mathf.Sqrt(r_1)) - (r_1 * Mathf.Sqrt(r_2))) / (r_2 - r_1);*/
+                    m = (Mathf.Sqrt(Mathf.Abs(r_2)) - Mathf.Sqrt(Mathf.Abs(r_1))) / (r_2 - r_1);
+                    p = ((r_2 * Mathf.Sqrt(Mathf.Abs(r_1))) - (r_1 * Mathf.Sqrt(Mathf.Abs(r_2)))) / (r_2 - r_1);
+                } else {
+                    /*m = 1f / (4 * r_1);
+                    p = Mathf.Sqrt(r_1) / 2f;*/
+                    m = 1f / (4 * r_1);
+                    p = Mathf.Sqrt(Mathf.Abs(r_1)) / 2f;
+                }
+
+                //Debug.Log($"m: {m}");
+                //Debug.Log($"p: {p}");
+
+                sqrtA[0] = (m * A_pqTA_pq[0]) + p;
+                sqrtA[1] = (m * A_pqTA_pq[1]);
+                sqrtA[2] = (m * A_pqTA_pq[2]);
+                sqrtA[3] = (m * A_pqTA_pq[3]) + p;
+
+                float determinant = 1f / ((sqrtA[0] * sqrtA[3]) - (sqrtA[1] * sqrtA[2]));
+                Sinv[0] = determinant * sqrtA[3];
+                Sinv[1] = determinant * -sqrtA[1];
+                Sinv[2] = determinant * -sqrtA[2];
+                Sinv[3] = determinant * sqrtA[0];
+
+                R[0] = (A_pq[0] * Sinv[0]) + (A_pq[1] * Sinv[2]);
+                R[1] = (A_pq[0] * Sinv[1]) + (A_pq[1] * Sinv[3]);
+                R[2] = (A_pq[2] * Sinv[0]) + (A_pq[3] * Sinv[2]);
+                R[3] = (A_pq[2] * Sinv[1]) + (A_pq[3] * Sinv[3]);
+
+                if (Mathf.Abs(R[0] - R[3]) < .001f && Mathf.Abs(R[1] - R[2]) > .001f) {
+                    if (R[1] < 0f) {
+                        this.fitRotate = -Mathf.Acos(R[0]) * 180f / Mathf.PI;
+                    } else {
+                        this.fitRotate = Mathf.Acos(R[0]) * 180f / Mathf.PI;
+                    }
+                } else {
+                    if (R[1] < 0f) {
+                        this.fitRotate = Mathf.Acos(R[0]) * 180f / Mathf.PI;
+                    } else {
+                        this.fitRotate = -Mathf.Acos(R[0]) * 180f / Mathf.PI;
+                    }
+                }
+            } else {
+                //matrix is rank deficient
+                //use arc tangent of first tangent to approximate
+                float y = this.polyline[^1].z - this.polyline[0].z;
+                float x = this.polyline[^1].x - this.polyline[0].x;
+                this.fitRotate = -Mathf.Atan2(y, x) * 180f / Mathf.PI;
             }
 
+            if (float.IsNaN(this.fitRotate)) {
+                Debug.Log("FITROTATE DEBUG SECTION");
+                Debug.Log($"A_pq (final value after loop): {String.Join(',', A_pq)}");
+                Debug.Log($"A_pqTA_pq: {String.Join(',', A_pqTA_pq)}");
+                Debug.Log($"r_1: {r_1}");
+                Debug.Log($"r_2: {r_2}");
+                Debug.Log($"sqrtA: {String.Join(',', sqrtA)}");
+                Debug.Log($"R: {String.Join(',', A_pqTA_pq)}");
+            } else {
+                Debug.Log($"FitRotate degrees: {fitRotate}");
+            }
+        }
+    
+        /// <summary>
+        /// This calculates the center of mass of the curve by sampling points equivalent in arc length to the input polyline.
+        /// The endpoint weight is configurable.
+        /// </summary>
+        /// <param name="endpointWeight"></param>
+        protected void SetupFitTranslation(float endpointWeight) {
+            //assign weights to all points in the input polyline
+            float weight = 1f;
+            Vector3 polylineCM = Vector3.zero;
+            Vector3 curveCM = Vector3.zero;
+
+            float totalPolylineWeight = (weight * (polyline.Count - 2)) + (endpointWeight * 2);
+            float totalCurveWeight = (weight * (ArcLengthSamples.Count - 2)) + (endpointWeight * 2);
+
+            float w;
+            for (int i = 0; i < polyline.Count; i++) { 
+                w = i == 0 || i == polyline.Count - 1 ? endpointWeight : weight;
+                polylineCM += polyline[i] * w;
+            }
+
+            polylineCM /= totalPolylineWeight;
+
+            for (int i = 0; i < ArcLengthSamples.Count; i++) {
+                w = i == 0 || i == ArcLengthSamples.Count - 1 ? endpointWeight : weight;
+                curveCM += ArcLengthSamples[i] * w;
+            }
+
+            curveCM /= totalCurveWeight;
+            
+            this.cmCurve = curveCM;
+            this.cmPolyline = polylineCM;
         }
     }
 }

@@ -2,8 +2,6 @@ using UnityEngine;
 using OpenCvSharp;
 using Cigen;
 using System;
-using System.Collections.Generic;
-using GeneralPathfinder;
 
 [CreateAssetMenu(fileName = "New Pathfinder Settings", menuName = "Pathfinding/Anisotropic Least Cost Path Finder Settings", order = 1)]
 public class AnisotropicLeastCostPathSettings : PathfinderSettings

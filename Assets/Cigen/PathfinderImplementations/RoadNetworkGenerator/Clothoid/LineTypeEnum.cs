@@ -4,4 +4,5 @@ namespace Clothoid {
         CIRCLE = 1,
         CLOTHOID = 2
     }
+    
 }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Clothoid;
-using Unity.Mathematics;
 using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
@@ -37,8 +36,8 @@ public class ClothoidSegmentExplorer : MonoBehaviour
     }
 
     private void Redraw() {
-        this.segment = new ClothoidSegmentSinghMcCrae(this.startArcLength, this.endArcLength, this.startCurvature, this.endCurvature, this.B);
-        DrawOrderedVector3s(this.segment.CalculateDrawingNodes(this.numSamples));
+        this.segment = new ClothoidSegment(this.startArcLength, this.endArcLength, this.startCurvature, this.endCurvature, this.B);
+        //DrawOrderedVector3s(this.segment.CalculateDrawingNodes(this.numSamples));
     }
 
     void OnValidate()

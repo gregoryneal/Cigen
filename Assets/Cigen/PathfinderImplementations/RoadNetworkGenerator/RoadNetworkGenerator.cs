@@ -1,17 +1,13 @@
 ﻿using System.Collections;
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 using OpenCvSharp;
 using Cigen.Factories;
-using Cigen.Structs;
 using Cigen.Conversions;
 using Cigen.ImageAnalyzing;
 using GeneralPathfinder;
-using UnityEditor.ShaderGraph.Serialization;
 using System.Linq;
 using UnityEngine.Events;
-using System.ComponentModel.Design.Serialization;
 
 namespace Cigen
 {

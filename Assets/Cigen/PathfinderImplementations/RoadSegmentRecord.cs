@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using GeneralPathfinder;
-using Unity.Mathematics;
 using UnityEngine;
 
 [Serializable]

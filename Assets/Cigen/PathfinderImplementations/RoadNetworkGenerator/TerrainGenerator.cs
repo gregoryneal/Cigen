@@ -1,5 +1,3 @@
-using System.Collections;
-using GeneralPathfinder;
 using UnityEngine;
 
 public class TerrainGenerator : MonoBehaviour {
