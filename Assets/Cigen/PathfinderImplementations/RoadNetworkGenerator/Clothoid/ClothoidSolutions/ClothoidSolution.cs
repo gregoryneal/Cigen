@@ -5,10 +5,8 @@ using UnityEngine;
 namespace Clothoid {
     /// <summary>
     /// This is a generic class that implements specific clothoid segmentation algorithms. Given an input polyline (sequential list of points in space) this will return a
-    /// ClothoidCurve object made up of an ordered list of derived ClothoidSegment objects of type T. I admit this might by a bit overkill for this type of problem but I wanted
-    /// to implement different types of clothoid curves using different implementation algorithms and this did it for me. 
+    /// ClothoidCurve object made up of an ordered list of derived ClothoidSegment.
     /// </summary>
-    /// <typeparam name="T">The specific class derived from ClothoidSegment that holds information about the type of ClothoidSegment for that solution.</typeparam>
     public abstract class ClothoidSolution : MonoBehaviour {
         protected List<ClothoidSegment> segments = new List<ClothoidSegment>();
         public List<Vector3> polyline { get; protected set; }
@@ -21,7 +19,9 @@ namespace Clothoid {
         /// <returns></returns>
         public abstract ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline, float allowableError = 0.1f, float endpointWeight = 1);
 
-        public abstract List<Vector3> GetFitSamples(int numSamples);
+        public virtual List<Vector3> GetFitSamples(int numSamples) {
+            return clothoidCurve.GetSamples(numSamples);
+        }
         
         /// <summary>
         /// Estimate the arc length of a given node on the polyline.

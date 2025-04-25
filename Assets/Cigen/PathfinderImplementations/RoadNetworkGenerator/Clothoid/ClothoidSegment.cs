@@ -30,6 +30,8 @@ namespace Clothoid {
         /// </summary>
         public float B { get; protected set; }
 
+        public float Sharpness => (EndCurvature - StartCurvature) / TotalArcLength;
+
         public Vector3 Offset { get; private set; }
 
         public float Rotation { get; private set; }
@@ -38,8 +40,9 @@ namespace Clothoid {
 
 
         /// <summary>
-        /// This determines the clothoid segment parameters. All clothoids are calculated first in "standard" form. That is, from the origin. To connect them we must apply a 
-        /// rotation, a mirror, and then a translation.
+        /// This determines the clothoid segment parameters. All clothoids are calculated first in "standard" form. 
+        /// That is, from the origin with the initial tangent positioned along the positive x axis. 
+        /// To connect them we must apply a rotation, a mirror, and then a translation.
         /// </summary>
         /// <param name="arcLengthStart"></param>
         /// <param name="arcLengthEnd"></param>
@@ -56,15 +59,9 @@ namespace Clothoid {
             CalculateOffsetAndRotation();
         }
 
-        public ClothoidSegment(float arcLengthStart, float arcLengthEnd, float startCurvature, float endCurvature) {
-            this.ArcLengthStart = arcLengthStart;
-            this.ArcLengthEnd = arcLengthEnd;
-            this.StartCurvature = startCurvature;
-            this.EndCurvature = endCurvature;
-            this.B = CalculateB(arcLengthStart, arcLengthEnd, startCurvature, endCurvature);
-            this.LineType = GetLineTypeFromCurvatureDiff(StartCurvature, EndCurvature);
-            CalculateOffsetAndRotation();
-        }
+        public ClothoidSegment(float arcLengthStart, float arcLengthEnd, float startCurvature, float endCurvature) : this(arcLengthStart, arcLengthEnd, startCurvature, endCurvature, CalculateB(arcLengthStart, arcLengthEnd, startCurvature, endCurvature)) {}
+
+        public ClothoidSegment(float totalArcLength, float startCurvature , float sharpness) : this(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature, CalculateB(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature)) {}
 
         /// <summary>
         /// Calcluate the scaling factor for the constrained SinghMcCrae clothoid segment.
@@ -93,7 +90,7 @@ namespace Clothoid {
                     //start with a positive or negative radius, and build a vector centered on the origin with the z value as the radius.
                     //rotate the point by the desired theta, positive theta rotates in the clockwise direction, negative values are ccw.
                     //now subtract the final z value by the radius (point.z -= radius) to get the final offset. 
-                    float radius = 2f / (StartCurvature + EndCurvature); //this might be positive or negative
+                    float radius = -2f / (StartCurvature + EndCurvature); //this might be positive or negative
                     float circumference = 2 * Mathf.PI * radius;
                     float fullSweepAngle_deg = 360f * TotalArcLength / circumference;
                     float rotationAngle = interp * fullSweepAngle_deg; //same here, value in degrees
@@ -224,7 +221,7 @@ namespace Clothoid {
         /// <param name="t"></param>
         /// <returns></returns>
         public static Vector3 SampleClothoidSegment(float t1, float t2, float t) {
-            Vector3 point = new Vector3(Math.C(t), 0, Math.S(t)) - new Vector3(Math.C(t1), 0, Math.S(t1));
+            Vector3 point = new Vector3(Mathc.C(t), 0, Mathc.S(t)) - new Vector3(Mathc.C(t1), 0, Mathc.S(t1));
             if (t2 > t1) {
                 point = RotateAboutAxis(point, Vector3.up, t1 * t1 * 180f / Mathf.PI);
             } else {
@@ -305,8 +302,8 @@ namespace Clothoid {
                     s += $"Circle with a {b} radius of {Mathf.Abs(radius)}";
                     break;
                 case LineType.CLOTHOID:
-                    string c = StartCurvature >= 0 ? "negative" : "positive";
-                    string d = EndCurvature >= 0 ? "negative" : "positive";
+                    string c = StartCurvature >= 0 ? "positive" : "negative";
+                    string d = EndCurvature >= 0 ? "positive" : "negative";
                     s += $"Clothoid with {c} start curvature and {d} end curvature";
                     break;
             }

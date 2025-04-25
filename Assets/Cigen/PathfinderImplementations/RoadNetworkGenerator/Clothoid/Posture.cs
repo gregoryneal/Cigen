@@ -2,9 +2,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Clothoid {
+
+    /// <summary>
+    /// A Posture is a method to generate target tangents and curvatures for a set of input nodes.
+    /// For every subsequent three points a, b, c the posture position P = point b (except for the first
+    /// and last posture, which use P = a and P = c respectively). The curvature is the radius of the 
+    /// circle C that passes through all three points (it handles collinear points as well), the sign of which
+    /// denotes the direction of curvature. The angle is defined by the angle made with the positive x-axis of
+    /// P on C.
+    /// </summary>
     public class Posture {
 
         public Vector3 Position => new Vector3(X, 0, Z);
+        //public Vector3 Tangent => new Vector3(Mathf.Cos(Angle * Mathf.PI / 180), 0, Mathf.Sin(Angle * Mathf.PI / 180));
+        public Vector3 Tangent { get; private set; }
 
         /// <summary>
         /// The point on the circumference of the circle represented by this posture.
@@ -12,18 +23,35 @@ namespace Clothoid {
         public float X { get; private set; }
         public float Z { get; private set; }
 
+        private float _angle = float.NaN;
+
         /// <summary>
         /// The the tangent angle in degrees of the circle at point (x, z)
         /// </summary>
-        public float Angle { get; private set; }
+        public float Angle { get {
+                if (float.IsNaN(_angle)) {
+                    _angle = Mathf.Atan2(Z, X) * 180 / Mathf.PI;
+                    while (_angle < 0) _angle += 360;
+                }
+                return _angle;
+            }
+        }
         public float Curvature { get; private set; }
         public Vector3 CircleCenter { get; private set; }
-
+/*
         public Posture(float x, float z, float angle, float curvature, Vector3 circleCenter) {
             this.X = x;
             this.Z = z;
             this.Angle = angle;
             this.Curvature = curvature;
+            this.CircleCenter = circleCenter;
+        }
+*/
+        public Posture(float x, float z, float curvature, Vector3 tangent, Vector3 circleCenter) {
+            this.X = x;
+            this.Z = z;
+            this.Curvature = curvature;
+            this.Tangent = tangent;
             this.CircleCenter = circleCenter;
         }
 
@@ -34,6 +62,7 @@ namespace Clothoid {
 
         public static List<Posture> CalculatePostures(List<Vector3> polyline) {
             List<Posture> postures = new List<Posture>();
+            if (polyline.Count < 3) return postures;
 
             for (int i = 0; i < polyline.Count; i++) {
                 if (i == 0) {
@@ -74,34 +103,37 @@ namespace Clothoid {
             }
 
             float curvature;
-            float angle;
+            Vector3 tangent;
             Vector3 circleCenter;
-            bool areCollinear = Math.AreCollinearPoints(point1, point2, point3);
+            bool areCollinear = Mathc.AreCollinearPoints(point1, point2, point3);
             bool foundCenter = false;
             if (areCollinear) {
                 curvature = 0;
-                angle = Mathf.Atan2(point3.z - point1.z, point3.x - point1.x) * 180f / Mathf.PI;
+                tangent = point3 - point1;
                 circleCenter = new Vector3(x, 0, z);
             } else {
-                curvature = Math.MoretonSequinCurvature(point1, point2, point3);
-                foundCenter = Math.CenterOfCircleOfThreePoints2(out Vector3 center, point1, point2, point3);
-                if (foundCenter) {
+                curvature = Mathc.MoretonSequinCurvature(point1, point2, point3);
+                if (Mathc.CenterOfCircleOfThreePoints2(out Vector3 center, point1, point2, point3)) {
                     circleCenter = center;
-                    angle = Mathf.Atan2(z - circleCenter.z, x - circleCenter.x) * 180f / Mathf.PI;
+                    //tangent slope is negative reciprocal of normal slope since they are orthogonal.
+                    tangent = new Vector3(z - circleCenter.z, 0, -(x - circleCenter.x));
+                    if (curvature > 0) tangent *= -1;
 
                 } else {
                     //we shouldn't get here so we can use this as debug.
                     Debug.LogError("Warning, something is wrong with the center of the circle calculations!");
                     circleCenter = point1;
-                    angle = 0;
+                    tangent = Vector3.zero;
                 }
             }
 
+            //angle = Mathf.Abs(angle);
+
             if (foundCenter) {
-                Debug.Log($"We found the center! point1: {point1} | point2: {point2} | point3: {point3} | areCollinear: {areCollinear} | curvature: {curvature} | circleCenter: {circleCenter} | angle: {angle}");
+                //Debug.Log($"We found the center! point1: {point1} | point2: {point2} | point3: {point3} | areCollinear: {areCollinear} | curvature: {curvature} | circleCenter: {circleCenter} | angle: {angle}");
             }
 
-            return new Posture(x, z, angle, curvature, circleCenter);
+            return new Posture(x, z, curvature, tangent, circleCenter);
         }
 
     }

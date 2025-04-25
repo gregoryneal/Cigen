@@ -167,7 +167,7 @@ namespace Clothoid {
             Vector3 point2 = this.polyline[polylineNodeIndex];
             Vector3 point3 = this.polyline[polylineNodeIndex+1];
             //negatize the curvature because in this solution the convention is that positive curvature is a right turn, opposite to most conventions
-            return (EstimateArcLength(this.polyline[polylineNodeIndex]), -Clothoid.Math.MoretonSequinCurvature(point1, point2, point3));
+            return (EstimateArcLength(this.polyline[polylineNodeIndex]), -Clothoid.Mathc.MoretonSequinCurvature(point1, point2, point3));
         }
 
         /// <summary>
@@ -521,13 +521,6 @@ namespace Clothoid {
         }
 
         /// <summary>
-        /// Get a number of evenly spaced samples along the solution curve.
-        /// </summary>
-        /// <returns></returns>
-        public override List<Vector3> GetFitSamples(int numSamples) {            
-            return clothoidCurve.GetSamples(numSamples);
-        }
-        /// <summary>
         /// Get a sample of the curve for each node in the input polyline.
         /// </summary>
         protected void SetupArcLengthSamples() {
@@ -603,13 +596,13 @@ namespace Clothoid {
             }
 
             //3. 
-            double[][] M = Clothoid.Math.SVDJacobiProgram.MatProduct(Clothoid.Math.SVDJacobiProgram.MatTranspose(ccp), cip);
+            double[][] M = Clothoid.Mathc.SVDJacobiProgram.MatProduct(Clothoid.Mathc.SVDJacobiProgram.MatTranspose(ccp), cip);
 
             //4. Vh is V transpose.
-            if (Clothoid.Math.SVDJacobiProgram.SVD_Jacobi(M, out double[][] U, out double[][] Vh, out double[] S)) {
+            if (Clothoid.Mathc.SVDJacobiProgram.SVD_Jacobi(M, out double[][] U, out double[][] Vh, out double[] S)) {
             
                 //5.
-                this.rotationMatrix = Clothoid.Math.SVDJacobiProgram.MatProduct(U, Vh);
+                this.rotationMatrix = Clothoid.Mathc.SVDJacobiProgram.MatProduct(U, Vh);
             } else {
                 Debug.LogError("Error: No rotation matrix found for spline");
             }
@@ -727,7 +720,7 @@ namespace Clothoid {
                 Debug.Log($"sqrtA: {String.Join(',', sqrtA)}");
                 Debug.Log($"R: {String.Join(',', A_pqTA_pq)}");
             } else {
-                Debug.Log($"FitRotate degrees: {fitRotate}");
+                //Debug.Log($"FitRotate degrees: {fitRotate}");
             }
         }
     

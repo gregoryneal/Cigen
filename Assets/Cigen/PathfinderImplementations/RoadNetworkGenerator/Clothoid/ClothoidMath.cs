@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Clothoid {
 
-    public static class Math {
+    public static class Mathc {
         
         /// <summary>
         /// This is the Fresnel Cosine Integral approximation, as given by:
@@ -260,6 +261,63 @@ namespace Clothoid {
             intersection = new Vector3(xValue, 0, yValue);
 
             return true;
+        }
+
+        public static bool LineCircleIntersection(out List<Vector3> intersections, Vector3 point, float slope, float circleRadius, Vector3 circleCenter) {
+            intersections = new List<Vector3>();
+            float zIntercept = InterceptFromPointAndSlope(point, slope);
+            float discriminant;
+            float a;
+            float b;
+            float c;
+            float x;
+            float y;
+            if (!float.IsFinite(slope)) {
+                //handle case where line is vertical line x = k
+                a = 1;
+                b = - 2 * circleCenter.z;
+                c = (circleCenter.x * circleCenter.x) + (circleCenter.z * circleCenter.z) - (circleRadius * circleRadius) - (2 * zIntercept * circleCenter.x) + (zIntercept * zIntercept);
+
+                discriminant = (b * b) - (4 * a * c);
+
+                if (discriminant < 0) {
+                    return false;
+                } else if (discriminant > 0) {
+                    y = (-b + Mathf.Sqrt(discriminant)) / (2 * a);
+                    intersections.Add(new Vector3(zIntercept, 0, y));
+                    y = (-b - Mathf.Sqrt(discriminant)) / (2 * a);
+                    intersections.Add(new Vector3(zIntercept, 0, y));
+                    return true;
+                } else {
+                    y = -b / (2 * a);
+                    intersections.Add(new Vector3(zIntercept, 0, y));
+                    return true;
+                }
+
+            } else {
+                a = (slope * slope) + 1;
+                b = 2 * ((slope * zIntercept) - (slope * circleCenter.z) - circleCenter.x);
+                c = (circleCenter.z * circleCenter.z) - (circleRadius * circleRadius) + (circleCenter.x * circleCenter.x) - (2 * zIntercept * circleCenter.z) + (zIntercept * zIntercept);
+
+                discriminant = (b * b) - (4 * a * c);
+
+                if (discriminant < 0) {
+                    //imaginary solutions 
+                    return false;
+                } else if (discriminant > 0) {
+                    //2 solutions
+                    x = (-b + Mathf.Sqrt(discriminant)) / (2 * a);
+                    intersections.Add(new Vector3(x, 0, (slope * x) + zIntercept));
+                    x = (-b - Mathf.Sqrt(discriminant)) / (2 * a);
+                    intersections.Add(new Vector3(x, 0, (slope * x) + zIntercept));
+                    return true;
+                } else {
+                    //1 solution
+                    x = -b / (2 * a);
+                    intersections.Add(new Vector3(x, 0, (slope * x) + zIntercept));
+                    return true;
+                }
+            }
         }
 
         /// <summary>

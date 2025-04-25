@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Numerics;
 
 namespace Clothoid {
 
@@ -28,21 +29,19 @@ namespace Clothoid {
         /// </summary>
         public List<Posture> Postures { get; private set; }
 
-        public override ClothoidCurve CalculateClothoidCurve(List<Vector3> inputPolyline, float allowableError = 0.1F, float endpointWeight = 1)
+        public override ClothoidCurve CalculateClothoidCurve(List<UnityEngine.Vector3> inputPolyline, float allowableError = 0.1F, float endpointWeight = 1)
         {
+            this.clothoidCurve = new ClothoidCurve();
             Postures = new List<Posture>();
             this.SetPolyline(inputPolyline);
             if (inputPolyline.Count >= 3) {
                 SetupPostures();
             }
 
-            return new ClothoidCurve();
-            //throw new System.NotImplementedException();
-        }
+            SolveClothoidParameters();
 
-        public override List<Vector3> GetFitSamples(int numSamples)
-        {
-            throw new System.NotImplementedException();
+            return this.clothoidCurve;
+            //throw new System.NotImplementedException();
         }
 
         /// <summary>
@@ -136,15 +135,20 @@ namespace Clothoid {
             //angles of small circular arc segment of the posture circles
             float theta1;
             float theta2;
-            //circular arc lengths for first estimation of l1 and l2.
+            //circular arc lengths for current estimation values of l1 and l2.
             float s1;
             float s2;
+            float tempS1; //all generated l1 values
+            float tempS2; //all l2 values
+            float pa = .1f; //the determines how much to perturb s1 and s2 by every iteration
+            //perturb the arc lengths based on the difference between the guess and the goal positions (maybe i havent tried it yet it might suck)
+            //s1[i] = s1 * i * pa * dist(guess, goal)
             float s3; //final arc length that is calculated from l1 and l2
             //vectors pointing from the circle center to the posture points
-            Vector3 v1;
-            Vector3 v2;
-            Vector3 v3;
-            Vector3 v4;
+            UnityEngine.Vector3 v1;
+            UnityEngine.Vector3 v2;
+            UnityEngine.Vector3 v3;
+            UnityEngine.Vector3 v4;
 
             //Quadratic equation parameters
             float a;
@@ -164,7 +168,10 @@ namespace Clothoid {
             ClothoidCurve curve = new ClothoidCurve();
 
             //final position guess
-            Vector3 guess;
+            UnityEngine.Vector3 guess;
+            //temp variable to find min distance from guess to goal
+            float minDist = Mathf.Infinity;
+            float goalDist = 0.01f;
 
             for (int i = 0; i+1 < Postures.Count; i++) {
                 posture1 = Postures[i];
@@ -189,53 +196,138 @@ namespace Clothoid {
                 if (0 > kf && kf > ki) sign = -1;
                 if (kf > ki && ki > 0) sign = -1;
 
+                //first l1 and l2 guess
                 // Guess the initial total arc lengths of the first and second clothoid segments
                 //radians
-                theta1 = Mathf.Acos(Vector3.Dot(v1, v2) / (v1.magnitude * v2.magnitude));
-                theta2 = Mathf.Acos(Vector3.Dot(v3, v4) / (v3.magnitude * v4.magnitude));
+                theta1 = Mathf.Acos(UnityEngine.Vector3.Dot(v1, v2) / (v1.magnitude * v2.magnitude));
+                theta2 = Mathf.Acos(UnityEngine.Vector3.Dot(v3, v4) / (v3.magnitude * v4.magnitude));
                 s1 = theta1 / ki; //first clothoid
                 s2 = theta2 / kf; //second clothoid
 
-                // Calculate the sharpness with a quadratic equation that took me 3 pages to derive
-                a = (s2 * s2) - (s1 * s2);
-                b = posture2.Angle - posture1.Angle - (2f * s2 * ki);
-                c = - ((kf * kf) - (ki * ki)) / 2f;
+                //set these two values so my debugger stops complaining about unset values (they definitely get set in the below loop)
+                x = 0;
+                s3 = 0;
 
-                xplus = - b + Mathf.Sqrt(((b * b) - (4 * a * c)) / ( 2 * a));
-                xminus = - b - Mathf.Sqrt(((b * b) - (4 * a * c)) / ( 2 * a));
+                int u = 0;
 
-                // Pick the value which matches the sign of sign
-                if (sign > 0) {
-                    if (xplus > 0) x = xplus;
-                    else x = xminus;
-                } else if (sign < 0) {
-                    if (xplus < 0) x = xplus;
-                    else x = xminus;
-                } else x = 0;
+                while (minDist > goalDist && u < 5000) {
+                    // Fix s2 and perturb s1 5 times
+                    for (int j = -2; j < 3; j++) {
+                        tempS1 = j * pa * s1;
 
-                // Calculate the arc length of the third clothoid
-                s3 = ((kf - ki) / x) + s2 - s1;
+                        // Calculate the sharpness with a quadratic equation that took me 3 pages to derive
+                        a = (s2 * s2) - (tempS1 * s2);
+                        b = posture2.Angle - posture1.Angle - (2f * s2 * ki);
+                        c = - ((kf * kf) - (ki * ki)) / 2f;
 
-                // Calculate the final position of the clothoids
-                // final curvature is:
-                // ki + xs1 -> first segment
-                // ki + xs1 - xs2 -> second segment
-                // ki + xs1 - xs2 + xs3 -> third segment (this should also approximate kf)
-                k1f = ki + (x * s1);
-                k2f = k1f - (x * s2);
-                k3f = k2f + (x * s3);
+                        float z = ((b * b) - (4 * a * c)) / ( 2 * a);
 
-                // Build segments so we can make a curve and have it do all the calculations for us
-                curve.Reset();
-                curve.AddSegment(new ClothoidSegment(0, s1, ki, k1f))
-                     .AddSegment(new ClothoidSegment(0, s2, k1f, k2f))
-                     .AddSegment(new ClothoidSegment(0, s3, k2f, k3f));
+                        xplus = - b + Mathf.Sqrt(z);
+                        xminus = - b - Mathf.Sqrt(z);
 
-                // This is the value in local clothoid space, which extends from the x axis
-                guess = posture1.Position + ClothoidSegment.RotateAboutAxis(curve.SampleCurveFromArcLength(s1 + s2 + s3), Vector3.up, posture1.Angle);
+                        // Pick the value which matches the sign of sign
+                        if (sign > 0) {
+                            if (xplus > 0) x = xplus;
+                            else x = xminus;
+                        } else if (sign < 0) {
+                            if (xplus < 0) x = xplus;
+                            else x = xminus;
+                        } else x = 0;
 
-                // TODO: Make this guess iterative using the flowchart
-                // TODO: Make this also a step through visualization
+                        // Calculate the arc length of the third clothoid
+                        s3 = ((kf - ki) / x) + s2 - tempS1;
+
+                        // Calculate the final position of the clothoids
+                        // final curvature is:
+                        // ki + xs1 -> first segment
+                        // ki + xs1 - xs2 -> second segment
+                        // ki + xs1 - xs2 + xs3 -> third segment (this should also approximate kf)
+                        k1f = ki + (x * tempS1);
+                        k2f = k1f - (x * s2);
+                        k3f = k2f + (x * s3);
+
+                        // Build segments so we can make a curve and have it do all the calculations for us
+                        curve.Reset();
+                        curve.AddSegment(new ClothoidSegment(0, tempS1, ki, k1f))
+                            .AddSegment(new ClothoidSegment(0, s2, k1f, k2f))
+                            .AddSegment(new ClothoidSegment(0, s3, k2f, k3f));
+
+                        // This is the value in local clothoid space, which extends from the x axis
+                        guess = posture1.Position + ClothoidSegment.RotateAboutAxis(curve.SampleCurveFromArcLength(tempS1 + s2 + s3), UnityEngine.Vector3.up, posture1.Angle);
+                        float dist = UnityEngine.Vector3.Distance(guess, posture2.Position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            //fix new value of s1 that minimizes the distance
+                            s1 = tempS1;
+                        }
+                    }
+
+                    if (minDist <= goalDist) break;
+
+                    // Fix s1 and perturb s2 5 times
+                    for (int j = -2; j < 3; j++) {
+                        tempS2 = j * pa * s2;
+
+                        // Calculate the sharpness with a quadratic equation that took me 3 pages to derive
+                        a = (tempS2 * tempS2) - (s1 * tempS2);
+                        b = posture2.Angle - posture1.Angle - (2f * tempS2 * ki);
+                        c = - ((kf * kf) - (ki * ki)) / 2f;
+
+                        float z = ((b * b) - (4 * a * c)) / ( 2 * a);
+
+                        xplus = - b + Mathf.Sqrt(z);
+                        xminus = - b - Mathf.Sqrt(z);
+
+                        // Pick the value which matches the sign of sign
+                        if (sign > 0) {
+                            if (xplus > 0) x = xplus;
+                            else x = xminus;
+                        } else if (sign < 0) {
+                            if (xplus < 0) x = xplus;
+                            else x = xminus;
+                        } else x = 0;
+
+                        // Calculate the arc length of the third clothoid
+                        s3 = ((kf - ki) / x) + tempS2 - s1;
+
+                        // Calculate the final position of the clothoids
+                        // final curvature is:
+                        // ki + xs1 -> first segment
+                        // ki + xs1 - xs2 -> second segment
+                        // ki + xs1 - xs2 + xs3 -> third segment (this should also approximate kf)
+                        k1f = ki + (x * s1);
+                        k2f = k1f - (x * tempS2);
+                        k3f = k2f + (x * s3);
+
+                        // Build segments so we can make a curve and have it do all the calculations for us
+                        curve.Reset();
+                        curve.AddSegment(new ClothoidSegment(0, s1, ki, k1f))
+                            .AddSegment(new ClothoidSegment(0, tempS2, k1f, k2f))
+                            .AddSegment(new ClothoidSegment(0, s3, k2f, k3f));
+
+                        // This is the value in local clothoid space, which extends from the x axis
+                        guess = posture1.Position + ClothoidSegment.RotateAboutAxis(curve.SampleCurveFromArcLength(s1 + tempS2 + s3), UnityEngine.Vector3.up, posture1.Angle);
+                        float dist = UnityEngine.Vector3.Distance(guess, posture2.Position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            //fix new value of s1 that minimizes the distance
+                            s2 = tempS2;
+                        }
+                    }
+
+                    u++;
+                }
+
+                if (u >= 5000) Debug.Log("Attempt count exceeded!");
+                Debug.Log($"final params: x: {x}, s1: {s1}, s2: {s2}, s3: {s3}");
+
+                // The curve object should have our clothoid curve now. This is just a subset of the entire curve, the three segments that make up the curve connecting the two postures.
+                // Lets add the curve to our current built curve
+                this.clothoidCurve += curve;
+            }
+
+            for (int i = 0; i < segments.Count; i++) {
+                Debug.Log(segments[i].Description());
             }
         }
 
@@ -253,23 +345,23 @@ namespace Clothoid {
         /// <param name="numSamples"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public List<Vector3> GetPostureSamples(int postureIndex, int numSamples) {
+        public List<UnityEngine.Vector3> GetPostureSamples(int postureIndex, int numSamples) {
             if (postureIndex < 0 || postureIndex >= Postures.Count) throw new ArgumentOutOfRangeException();
             Posture posture = Postures[postureIndex];
             //Debug.Log(posture.ToString());
             if (posture.Curvature != 0) {
                 float radius = 1 / posture.Curvature;
-                Vector3 centerCircle = posture.CircleCenter;
-                Vector3 sampleCircle = new Vector3(0, 0, radius);
-                List<Vector3> samples = new List<Vector3>();
+                UnityEngine.Vector3 centerCircle = posture.CircleCenter;
+                UnityEngine.Vector3 sampleCircle = new UnityEngine.Vector3(0, 0, radius);
+                List<UnityEngine.Vector3> samples = new List<UnityEngine.Vector3>();
                 float sampleAngleDeg = 360f / numSamples;
                 for (float angleDeg = 0; angleDeg <= 360f; angleDeg += sampleAngleDeg) {
-                    samples.Add(ClothoidSegment.RotateAboutAxis(sampleCircle, Vector3.up, angleDeg) + centerCircle);
+                    samples.Add(ClothoidSegment.RotateAboutAxis(sampleCircle, UnityEngine.Vector3.up, angleDeg) + centerCircle);
                 }
                 return samples;
             } 
 
-            return new List<Vector3>();
+            return new List<UnityEngine.Vector3>();
         }
 
         
