@@ -4,18 +4,20 @@ using UnityEngine;
 
 namespace Clothoid {
     public class ClothoidSegment {
-        public static float CURVE_FACTOR = (float)System.Math.Sqrt(System.Math.PI/2);
+        public static float CURVE_FACTOR = 1;//(float)System.Math.Sqrt(System.Math.PI/2);
         //if the curvature is less than this we will approximate it as a line segment.
         public static float MIN_CURVATURE_DIFF = 0.0015f;
         /// <summary>
-        /// Arc length at the start, not necessarily 0. We could shift the represented segment along the curve.
+        /// Represents the arc length on the parent ClothoidCurve where this segment starts.
         /// </summary>
         public float ArcLengthStart { get; protected set; }
         /// <summary>
-        /// Arc length at the end of the segment.
+        /// Arc length on the parent ClothoidCurve where this segment ends.
         /// </summary>
         public float ArcLengthEnd { get; protected set; }
-
+        /// <summary>
+        /// The total arc length of this segment.
+        /// </summary>
         public float TotalArcLength => ArcLengthEnd - ArcLengthStart;
         /// <summary>
         /// Curvature in radians at the start of the segment. Positive -> right hand turn, negative -> left hand turn.
@@ -30,13 +32,19 @@ namespace Clothoid {
         /// </summary>
         public float B { get; protected set; }
 
-        public float Sharpness => (EndCurvature - StartCurvature) / TotalArcLength;
+        public float Sharpness { get { 
+            if (EndCurvature == StartCurvature) return 0; 
+            else if (TotalArcLength > 0) return (EndCurvature - StartCurvature) / TotalArcLength; 
+            else return 0;
+            } }
 
         public Vector3 Offset { get; private set; }
 
         public float Rotation { get; private set; }
 
         public LineType LineType { get; private set; }
+
+        public bool isMirroredX = false;
 
 
         /// <summary>
@@ -61,7 +69,7 @@ namespace Clothoid {
 
         public ClothoidSegment(float arcLengthStart, float arcLengthEnd, float startCurvature, float endCurvature) : this(arcLengthStart, arcLengthEnd, startCurvature, endCurvature, CalculateB(arcLengthStart, arcLengthEnd, startCurvature, endCurvature)) {}
 
-        public ClothoidSegment(float totalArcLength, float startCurvature , float sharpness) : this(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature, CalculateB(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature)) {}
+        public ClothoidSegment(float startCurvature, float sharpness , float totalArcLength) : this(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature, CalculateB(0, totalArcLength, startCurvature, (sharpness * totalArcLength) + startCurvature)) {}
 
         /// <summary>
         /// Calcluate the scaling factor for the constrained SinghMcCrae clothoid segment.
@@ -80,11 +88,13 @@ namespace Clothoid {
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public Vector3 SampleSegmentByTotalArcLength(float arcLength) {
+            Vector3 v;
             if (arcLength > ArcLengthEnd || arcLength < ArcLengthStart) throw new ArgumentOutOfRangeException();
             float interp = (arcLength - ArcLengthStart) / TotalArcLength;
             switch (this.LineType) {
                 case LineType.LINE:
-                    return new Vector3(arcLength - ArcLengthStart, 0, 0);
+                    v = new Vector3(arcLength - ArcLengthStart, 0, 0);
+                    break;
                 case LineType.CIRCLE:
                     //we build the circle constructively to find the point and rotation angle.
                     //start with a positive or negative radius, and build a vector centered on the origin with the z value as the radius.
@@ -95,11 +105,17 @@ namespace Clothoid {
                     float fullSweepAngle_deg = 360f * TotalArcLength / circumference;
                     float rotationAngle = interp * fullSweepAngle_deg; //same here, value in degrees
                     Vector3 vector = RotateAboutAxis(new Vector3(0, 0, radius), Vector3.up, rotationAngle);
-                    return new Vector3(vector.x, vector.y, vector.z - radius);
+                    v = new Vector3(vector.x, vector.y, vector.z - radius);
+                    //return new Vector3(vector.x, vector.y, isMirroredX ? radius - vector.z : vector.z - radius);
+                    break;
                 default: 
                     //clothoid
-                    return this.SampleClothoid(interp);
+                    v = this.SampleClothoid(interp);
+                    break;
             }
+
+            //if (Sharpness == 0) v = new Vector3(v.x, v.y, -v.z);
+            return v;
         }
 
         /// <summary>
@@ -123,6 +139,16 @@ namespace Clothoid {
             return SampleSegmentByTotalArcLength(totalArcLength);
         }
 
+        public List<Vector3> GetSamples(int numSamples) {
+            List<Vector3> points = new List<Vector3>();
+            for (int i = 0; i < numSamples-1; i++) {
+                points.Add(SampleSegmentByRelativeLength((float)i/(numSamples - 1)));
+            }
+            //do the endpoint manually
+            points.Add(SampleSegmentByRelativeLength(1));
+            return points;
+        }
+
         /// <summary>
         /// Here we calculate the offset and rotation for the segment. All of the shapes can be thought of as being generated from the origin.
         /// Lines are generated in the positive X direction, circles with negative radius (Left turning) are generate in the positive z planar subsection,
@@ -134,7 +160,7 @@ namespace Clothoid {
         protected void CalculateOffsetAndRotation() {
             switch (this.LineType) {
                 case LineType.LINE:
-                    this.Offset = new Vector3(ArcLengthEnd - ArcLengthStart, 0, 0);
+                    this.Offset = new Vector3(TotalArcLength, 0, 0);
                     this.Rotation = 0;
                     break;
                 case LineType.CIRCLE:
@@ -142,7 +168,7 @@ namespace Clothoid {
                     //start with a positive or negative radius, and build a vector centered on the origin with the z value as the radius.
                     //rotate the point by the desired theta, positive theta rotates in the clockwise direction, negative values are ccw.
                     //now subtract the final z value by the radius (point.z -= radius) to get the final offset. 
-                    float radius = 2f / (StartCurvature + EndCurvature); //this might be positive or negative
+                    float radius = - 2f / (StartCurvature + EndCurvature); //this might be positive or negative
 
                     bool negativeCurvature = radius < 0;
                     float circumference = 2f * Mathf.PI * Mathf.Abs(radius);
@@ -153,30 +179,38 @@ namespace Clothoid {
                         vector = RotateAboutAxis(new Vector3(0, 0, radius), Vector3.up, rotationAngle);                        
                         //Debug.Log($"Circle offset before radius subtraction: {vector}");
                         vector = new Vector3(vector.x, vector.y, vector.z - radius);
-                        this.Rotation = rotationAngle;
+                        this.Rotation = -rotationAngle;
                         this.Offset = vector;
                     } else {
                         radius = Mathf.Abs(radius);
                         vector = RotateAboutAxis(new Vector3(0, 0, -radius), Vector3.up, -rotationAngle);
                         //Debug.Log($"Circle offset before radius addition: {vector}");
                         vector = new Vector3(vector.x, vector.y, vector.z + radius);
-                        this.Rotation = -rotationAngle;
+                        this.Rotation = rotationAngle;
                         this.Offset = vector;
                     }
-
-                    //Debug.Log($"Circle stats: radius: {radius}, negativeCurvature: {negativeCurvature}, circumference: {circumference}...");
-                    //Debug.Log($"Circle stats cont: rotationAngle: {rotationAngle}, offset: {vector}");
+                    Debug.Log($"Circle stats: radius: {radius}, negativeCurvature: {negativeCurvature}, circumference: {circumference}...");
+                    Debug.Log($"Circle stats cont: rotationAngle: {rotationAngle}, offset: {vector}");
                     break;
                 default: 
                     //clothoid
                     //the angle is represented by the difference of squares of the scaled curvature parameters.
                     this.Offset = SampleClothoid(1);
+                    //float c = (float)System.Math.Sqrt(System.Math.PI/2);
                     float t1 = StartCurvature * B * CURVE_FACTOR;
                     float t2 = EndCurvature * B * CURVE_FACTOR;
-                    if (t2 > t1) this.Rotation = - ((t2 * t2) - (t1 * t1)) * 180f / Mathf.PI;
-                    else this.Rotation = - (((t1 * t1) - (t2 * t2)) * 180f / Mathf.PI);
+                    //this.Rotation = - TotalArcLength * EndCurvature * 180 / (2 * Mathf.PI);
+                    
+                    if (t2 > t1) this.Rotation = ((t2 * t2) - (t1 * t1)) * 180f / Mathf.PI;
+                    else this.Rotation = (((t1 * t1) - (t2 * t2)) * 180f / Mathf.PI);
                     break;
             }
+
+            Debug.Log($"New Segment Rotation: {this.Rotation}");
+
+            /*if (isMirroredX) {
+                this.Rotation += 180;
+            }*/
         }
 
         /// <summary>
@@ -240,9 +274,20 @@ namespace Clothoid {
             float t1 = StartCurvature * B * CURVE_FACTOR;
             float t2 = EndCurvature * B * CURVE_FACTOR;
             float t = t1 + (interpolation * (t2 - t1));
-            return B * Mathf.PI * SampleClothoidSegment(t1, t2, t);
-        }
+            Vector3 s = SampleClothoidSegment(t1, t2, t);
 
+            //if (isMirroredX) return B * Mathf.PI * new Vector3(s.x, s.y, -s.z);
+            /*else */return B * Mathf.PI * s;
+        }
+        
+        /// <summary>
+        /// Rotates a vector about an axis by an angle in degrees. If the angle is positive, this results in a clockwise rotation.
+        /// If the angle is negative, this results in counterclockwise rotation.
+        /// </summary>
+        /// <param name="vector"></param>
+        /// <param name="axis"></param>
+        /// <param name="degrees"></param>
+        /// <returns></returns>
         public static Vector3 RotateAboutAxis(Vector3 vector, Vector3 axis, float degrees) {
             return Quaternion.AngleAxis(degrees, axis) * vector;
         }

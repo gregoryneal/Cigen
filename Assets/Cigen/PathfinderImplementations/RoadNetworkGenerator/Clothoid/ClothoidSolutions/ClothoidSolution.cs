@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using UnityEditor.Rendering;
 using UnityEngine;
 
 namespace Clothoid {
@@ -11,7 +13,22 @@ namespace Clothoid {
         protected List<ClothoidSegment> segments = new List<ClothoidSegment>();
         public List<Vector3> polyline { get; protected set; }
         public ClothoidCurve clothoidCurve { get; protected set; }
-        public virtual int Count { get { return polyline.Count; }}
+        /// <summary>
+        /// The number of polyline nodes in this solution
+        /// </summary>
+        public virtual int Count { get {
+                try {
+                    return polyline.Count; 
+                } catch (NullReferenceException) {
+                    return 0;
+                }
+            }   
+        }
+        /// <summary>
+        /// Number of segments in the solution curve.
+        /// </summary>
+        public virtual int SegmentCount { get { return clothoidCurve.Count; }}
+
         /// <summary>
         /// Given an ordered list of Vector3s that make up the polyline control nodes, generate a list of ClothoidSegments that use those nodes.
         /// </summary>

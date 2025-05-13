@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mono.Cecil;
+using NUnit.Framework.Constraints;
 using OpenCvSharp;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -39,18 +41,54 @@ namespace Clothoid {
 
         private ClothoidCurve clothoidCurve1;
 
+        private List<Vector3> pointList = new List<Vector3>() {new Vector3(1, 0, 3), new Vector3(5, 0, 8), new Vector3(13, 0, 2), new Vector3(15, 0, -6), new Vector3(17, 0, -12)};
+
         private IEnumerator<List<Vector3>> getNextPointList;
 
         public ClothoidSolutionShinSingh solutionshinsingh;
         public ClothoidSolutionSinghMcCrae solutionSinghMcCrae;
+
+        private IEnumerator<(Posture, Posture)> standardPostures;
+        private List<Posture> pointListPostures; 
         void Start() {
             this.clothoidCurve1 = new ClothoidCurve();
+            clothoidCurve1.Reset();
             //solution = GetComponent<ClothoidSolutionSinghMcCrae>();
             awake = true;
             getNextPointList = ClothoidCurve.TestAllConnectionTypes(a, b, c, d, e, f);
 
+            DrawOrderedVector3s(pointList, this.lrNodes);
+            solutionshinsingh.CalculateClothoidCurve(pointList);
+            nextCurve = solutionshinsingh.SolveClothoidParameters();
+
             renderers = new LineRenderer[] {unTranslatedSamplesLR, translatedSampleLR, lkNodeLR, segmentedLKLR};
+
+            /*endpointObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            endpointObject.GetComponent<Renderer>().material.color = Color.red;
+            endpointObject.transform.localScale = Vector3.one * 2;*/
+
+            pointListPostures = Posture.CalculatePostures(pointList);
+            standardPostures = Posture.GetStandardPostures(pointListPostures);
             //CreateRandomClothoidCurve();
+        }
+
+        [ContextMenu("Show Next Posture")]
+        public void NextPosture() {
+            if (standardPostures.MoveNext()) {
+                pointlistindex++;
+                ShowPosture();
+            }
+        }
+        private int pointlistindex = -1;
+
+        public void ShowPosture() {
+            if (pointlistindex >= 0 && pointlistindex < pointList.Count) {
+                (Posture, Posture) p = standardPostures.Current;
+                DrawOrderedVector3s(new List<Vector3>() {p.Item1.Position, p.Item2.Position}, this.segmentedLKLR);
+                DrawOrderedVector3s(p.Item1.GetSamples(50), this.circleLR);
+                DrawOrderedVector3s(p.Item2.GetSamples(50), this.lkNodeLR);
+                DrawOrderedVector3s(pointListPostures[pointlistindex].GetSamples(50), this.translatedSampleLR);
+            }
         }
     
         bool shouldDraw = false;
@@ -71,7 +109,7 @@ namespace Clothoid {
         private GameObject Q;
         void Update()
         {
-            /*
+            
              //Drawing points
             if (Input.GetMouseButton(0)) {
                 shouldDraw = true;
@@ -99,9 +137,11 @@ namespace Clothoid {
                     //MakeCoolGraph();
                     RedrawCurve();
                 }
-            }*/
+            }
 
 
+            //Test if click point is in Gamma Region
+            /*
             if (Input.GetMouseButtonDown(0)) {
                 Vector2 mousePixels = Input.mousePosition; //bottom left is 0,0
                 Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(mousePixels.x, mousePixels.y, Camera.main.transform.position.y));
@@ -109,7 +149,7 @@ namespace Clothoid {
                 if (Q) GameObject.Destroy(Q);
                 Q = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 Q.transform.position = worldPos;
-                Q.transform.localScale = Vector3.one * 5;
+                Q.transform.localScale = Vector3.one;
                 Q.GetComponent<Renderer>().material.color = Color.red;
 
                 Debug.Log($"Q in Gamma == {ClothoidSolutionWaltonMeek.IsInGamma(worldPos, startCurvature, endCurvature, endTangent)}");
@@ -118,7 +158,7 @@ namespace Clothoid {
             if (Input.GetKeyDown(KeyCode.Space)) {
                 //TestAllConnectionTypes();
                 ShowTangents();
-            }
+            }*/
         }
 
         [Header("Gamma Region testing")]
@@ -128,6 +168,8 @@ namespace Clothoid {
         public float startCurvature = 0;
         [Range(0, 1)]
         public float endCurvature = .2f;
+        [Range(0, 1)]
+        public float sharpness = .01f;
 
         [ContextMenu("Test Gamma Region")]
         public void TestGammaRegion() {
@@ -175,8 +217,8 @@ namespace Clothoid {
             if (this.drawingPoints.Count == 0) return;
             //DrawOrderedVector3s(CreateLinearDecreasingCurvatureCurve(maxArcLength, curvature, numSamples));
             //List<Vector3> verts = CrazyCurve(this.numSamples);//OrderedVertices(UnityEngine.Random.Range(20, 30));
-            //this.clothoidCurve = this.solution.CalculateClothoidCurve(this.drawingPoints, this.maxError, this.endpointWeight);
-
+            //ClothoidCurve c = this.solutionshinsingh.CalculateClothoidCurve(this.drawingPoints);
+            //DrawOrderedVector3s(this.solutionshinsingh.GetFitSamples(this.solutionshinsingh.SegmentCount * 20), this.circleLR);
             /*Debug.Log("Positions from polyline index vs resultant curve sampling: (dindex, dsampling) ");
             for (int i = 0; i+1 < this.clothoidCurve.PolylineCount; i++) {
                 Vector3 firstPos = this.clothoidCurve.GetPositionFromPolyline(i);
@@ -217,24 +259,92 @@ namespace Clothoid {
             }
         }
 
+        public float maxAngle = 360;
+        public void DrawLastPosture() {
+            Debug.Log("RUNNING");
+            if (drawingPoints.Count == 0 && cachedDrawingPoints.Count >= 3) {
+                solutionshinsingh.CalculateClothoidCurve(cachedDrawingPoints);
+                Posture p = solutionshinsingh.Postures[^1];
+                DrawOrderedVector3s(p.GetSamples(100, 0, maxAngle), this.circleLR, 0, false, 3);
+            } else {
+                if (solutionshinsingh.Count >= 3) {
+                    Posture p = solutionshinsingh.Postures[^1];
+                    DrawOrderedVector3s(p.GetSamples(100, 0, maxAngle), this.circleLR, 0, false, 3);
+                } else {
+                    Debug.Log("NOT ENOUGH POINTS");
+                }
+            }
+        }
+
+        IEnumerator<ClothoidCurve> nextCurve;
+        [ContextMenu("Setup Point List")]
+        public void SetupPointList() {
+            this.solutionshinsingh.CalculateClothoidCurve(pointList);
+        }
+        [ContextMenu("Get Next Curve Approximation")]
+        public void TestPointList() {
+            if (nextCurve.MoveNext()) {
+                ClothoidCurve c = nextCurve.Current;
+                //Debug.Log(c.ToString());
+                List<Vector3> samples = c.GetSamples(100 * c.Count);
+                //Debug.Log(samples.Count);
+                //segmentedLKLR.startWidth = .1f;
+                //segmentedLKLR.endWidth = .1f;
+                DrawOrderedVector3s(samples, this.segmentedLKLR, 0, false);
+            } else {
+                Debug.Log("Can't move next!");
+            }
+        }
+
+        private double F1(double x) {
+            return Math.Sin(x);
+        }
+
+        private double F2(double x) {
+            return (x * x * x) / (1 - (4 * Math.Log(x, Math.E)));
+        }
+
+        private GameObject endpointObject;
+
         [ContextMenu("Redraw curve")]
         public void RedrawCurve() {
-            ShowTangents();
-
-            //clothoidCurve1.AddRandomCurve2();
-            //DrawOrderedVector3s(clothoidCurve1.GetSamples(clothoidCurve1.Count * 10), this.circleLR);
+            //Debug.Log($"Adding segment number {clothoidCurve1.Count + 1}");
+            DrawOrderedVector3s(ClothoidCurve.GetRandomCurve().GetSamples(50), this.circleLR, 0, false);
 
             //this.solutionshinsingh.CalculateClothoidCurve(drawingPoints);
+
+            /*ClothoidSegment s = new ClothoidSegment(startCurvature, sharpness, ArcLengthEnd); //final curvature is k + xs (initial curvature + (sharpness * arclength))
+            ClothoidSegment s2 = new ClothoidSegment(s.EndCurvature, s.Sharpness, s.TotalArcLength);
+            ClothoidCurve c = new ClothoidCurve().AddSegments(s, s2);
+            DrawOrderedVector3s(c.GetSamples(100), this.circleLR, 0, false);
+
+            endpointObject.transform.position = c.Endpoint;
+
+
+            Debug.Log(s.Description());*/
+
+            /*
+            if (solutionshinsingh.Count >= 3) {
+                //draw the last two posture arcs (excluding the final point since the posture is the same shape as the second to last posture 
+                
+                Posture p1 = solutionshinsingh.Postures[^3];
+                Posture p2 = solutionshinsingh.Postures[^2];
+                List<Vector3>[] arcs = ClothoidSolutionShinSingh.GetSmallArcsThatConnectPostures(p1, p2);
+                //DrawLastPosture();
+                DrawOrderedVector3s(p1.GetSamples(500), this.lkNodeLR);
+                DrawOrderedVector3s(p2.GetSamples(500), this.segmentedLKLR);
+                DrawOrderedVector3s(arcs[0], this.translatedSampleLR, 0, false, 1);
+                DrawOrderedVector3s(arcs[1], this.unTranslatedSamplesLR, 0, false, 2);
+            }*/
             //Debug.Log($"Drawing points count: {drawingPoints.Count}");
             //Debug.Log($"Curve segment count: {this.solutionshinsingh.clothoidCurve.Count}");
-            //DrawOrderedVector3s(solutionshinsingh.GetFitSamples(150), this.circleLR);
+            //DrawOrderedVector3s(solutionshinsingh.GetFitSamples(20 * solutionshinsingh.SegmentCount), this.circleLR);
 
             //the singh mccrae solution
             //its not very good after all, maybe just my implementation but even the demo from mccrae wasn't that great. 
-            //though its way better than mine
-            /*
-            this.clothoidCurve2 = this.solutionSinghMcCrae.CalculateClothoidCurve(drawingPoints);
-            DrawOrderedVector3s(solutionSinghMcCrae.GetFitSamples(150), this.circleLR, 0, false, 1);*/
+            //though its way better than mine            
+            //this.clothoidCurve2 = this.solutionSinghMcCrae.CalculateClothoidCurve(drawingPoints);
+            //DrawOrderedVector3s(solutionSinghMcCrae.GetFitSamples(150), this.circleLR, 0, false, 1);
             
 
 /*
@@ -316,17 +426,28 @@ namespace Clothoid {
             //sumOfLength += Vector3.Distance(positions[^2], positions[^1]);
             if (zOffset != 0 || yOffset != 0) positions = newPositions;
 
-            lr.startWidth = this.lineWidth;
-            lr.endWidth = this.lineWidth;
+            //lr.startWidth = this.lineWidth;
+            //lr.endWidth = this.lineWidth;
             //lr.startColor = UnityEngine.Random.ColorHSV(0f, 1f, 1, 1, 1, 1);
             //lr.endColor = lr.startColor;
 
             lr.positionCount = positions.Count;
             lr.SetPositions(positions.ToArray());
         }
+
+        void DrawOrderedVector3s(List<System.Numerics.Vector3> positions, LineRenderer lr, float zOffset = 0, bool markNodes = true, float yOffset = 0) {
+            List<Vector3> v = new List<Vector3>();
+            for (int i = 0; i < positions.Count; i++) {
+                v.Add(positions[i].ToUnityVector3());
+            }
+            DrawOrderedVector3s(v, lr, zOffset, markNodes, yOffset);
+        }
+
         void OnValidate() {
             if (awake) {
-                TestGammaRegion();
+                //TestGammaRegion();
+                //DrawLastPosture();
+                RedrawCurve();
             }
         }
     }
