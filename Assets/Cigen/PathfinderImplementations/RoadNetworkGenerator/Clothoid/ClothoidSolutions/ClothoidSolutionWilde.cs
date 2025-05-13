@@ -16,12 +16,6 @@ namespace Clothoid {
             if (polyline.Count >= 3) this.postures = Posture.CalculatePostures(polyline);
             throw new System.NotImplementedException();
         }
-
-        public override List<Vector3> GetFitSamples(int numSamples)
-        {
-            throw new System.NotImplementedException();
-        }
-
         private void CalculateSegments() {
 
         }

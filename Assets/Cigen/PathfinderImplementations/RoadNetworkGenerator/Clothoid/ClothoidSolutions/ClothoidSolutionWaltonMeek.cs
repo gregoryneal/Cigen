@@ -89,7 +89,7 @@ namespace Clothoid {
         /// <param name="endCurvature"></param>
         /// <param name="endTangent">the tangent in radians</param>
         /// <returns></returns>
-        public static (float, float, Vector3) GetGammaRegionParameters(float startCurvature, float endCurvature, float endTangent) {
+        public static (float, float, Vector3)  GetGammaRegionParameters(float startCurvature, float endCurvature, float endTangent) {
             Vector3 R = CalculateR(endTangent, endCurvature);
             float slope = R.z / R.x;
             float radius;
@@ -118,12 +118,16 @@ namespace Clothoid {
 
         
         /// <summary>
-        /// Determines which side a point falls in relation to a curve.
+        /// Given A and C on a monotonically increasing curve, calculate which side of the curve Q is on.
         /// </summary>
-        /// <returns>True: point lies on the convex side of the curve.
-        /// False: point lies on the concave side of the curve.</returns>
-        private bool WhichSide() {
-            return true;
+        /// <param name="A">arc length at point A</param>
+        /// <param name="C">arc length at point C</param>
+        /// <param name="Q">the point we are testing</param>
+        /// <returns>0: Q is on the convex side of the curve. 1: Q is on the concave side of the curve. 2: Q is on the curve itself.</returns>
+        private int WhichSideD(double A, double C, Vector3 Q) {
+            //Calculate B
+            double B = (A + C) / 2;
+            return 0;
         }
 
         public static bool IsInGamma(Vector3 point, float startCurvature, float endCurvature, float endTangent) {
@@ -191,7 +195,7 @@ namespace Clothoid {
                     B = CalculateB(W, t, Kq2, Kp2);
                     KqB = Kq * B;
                     KpB = Kp * B;
-                    omega = - (KpB * KpB);
+                    omega = - (Kp * Kp * B * B);
                     points.Add(SampleD(t, B, W, omega, Kq, KqB, KpB));
                 }
                 //add last point manually
@@ -259,8 +263,8 @@ namespace Clothoid {
             float y = Mathf.PI * (W - t) / 2;
             float vx = -Mathf.Sin(x) + Mathf.Sin(y);
             float vz = Mathf.Cos(x) - Mathf.Cos(y);            
-            Vector3 a = GammaProduct(omega, KpB, KqB, B);            
-            return new Vector3(a.x - (vx / Kq), 0, a.z - (vz / Kq));
+            Vector3 a = GammaProduct(omega, KpB, KqB, B);
+            return a - (new Vector3(vx, 0, vz) / Kq);
         }
 
         /// <summary>
@@ -290,18 +294,20 @@ namespace Clothoid {
             };
         }
 
-        private static double[][] Vector(float KpB, float KqB) {
-            return new double[2][] {
-                new double[] {Mathc.C(KqB) - Mathc.C(KpB)},
-                new double[] {Mathc.S(KqB) - Mathc.S(KpB)}
-            };
+        private static double[] RotationMatrix(double omega, double x, double y) {
+            double w = System.Math.PI * omega / 2;
+            return new double[2] {(x*Math.Cos(w)) - (y*Math.Sin(w)), (x*Math.Sin(w)) + (y*Math.Cos(w))};
+        }
+
+        private static double[] Vector(float KpB, float KqB) {
+            return new double[2]{ Mathc.C(KqB) - Mathc.C(KpB), Mathc.S(KqB) - Mathc.S(KpB) };
         }
 
         public static Vector3 GammaProduct(float omega, float KpB, float KqB, float B) {            
-            double[][] a = Clothoid.Mathc.SVDJacobiProgram.MatProduct(RotationMatrix(omega), Vector(KpB, KqB));
-            float ax = (float)a[0][0];
-            float az = (float)a[1][0];
-            return B * Mathf.PI * new Vector3(ax, 0, az);
+            //double[][] a = Clothoid.Mathc.SVDJacobiProgram.MatProduct(RotationMatrix(omega), Vector(KpB, KqB));
+            double[] v = Vector(KpB, KqB);
+            double[] r = RotationMatrix(omega, v[0], v[1]);
+            return B * Mathf.PI * new Vector3((float)r[0], 0, (float)r[1]);
         }
 
         private static float CalculateB(float W, float t, float Kq2, float Kp2) {

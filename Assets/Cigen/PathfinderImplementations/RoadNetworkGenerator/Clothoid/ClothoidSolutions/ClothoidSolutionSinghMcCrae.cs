@@ -20,6 +20,7 @@ namespace Clothoid {
     /// </summary>
     public class ClothoidSolutionSinghMcCrae : ClothoidSolution
     {
+        public static float CURVE_FACTOR = (float)System.Math.Sqrt(System.Math.PI/2);
         /// <summary>
         /// The approximated segments from the segmented regression algorithm.
         /// </summary>
@@ -447,7 +448,7 @@ namespace Clothoid {
                 Debug.Log($"Segmented LK Node {i}: {segmentedLKNodes[i]}");
             }*/
             //SetupCanonicalSegments(); //build the segmentTranslation and segmentYRotation lists
-            this.clothoidCurve = new ClothoidCurve(ClothoidSegment.GenerateSegmentsFromLKGraph(segmentedLKNodes), inputPolyline);
+            this.clothoidCurve = new ClothoidCurve(ClothoidSegment.GenerateSegmentsFromLKGraph(segmentedLKNodes), inputPolyline, (float)System.Math.Sqrt(System.Math.PI/2));
             SetupArcLengthSamples(); //collect samples on the curve based on the arc lengths of the polyline
             SetupFitTranslation(endpointWeight);
             SetupFitRotation3(); //use the previous sampled points to calculate the optimal translation and rotation offset for the curve
